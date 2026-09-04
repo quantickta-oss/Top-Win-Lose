@@ -8,7 +8,6 @@
 </head>
 <body>
 
-  <!-- Sidebar Navigation -->
   <aside class="sidebar">
     <div class="brand">P/L <span>SYSTEM</span></div>
     
@@ -35,10 +34,8 @@
     <button class="nav-item" onclick="switchTab('connect')"><span class="icon">🏢</span> Connect P/L</button>
   </aside>
 
-  <!-- Main Content View Panel -->
   <main class="main-content">
     
-    <!-- Operational Matrix View -->
     <div id="view-matrix" class="view-panel active">
       <div class="header-container">
         <div>
@@ -62,32 +59,27 @@
             </tr>
           </thead>
           <tbody id="matrix-tbody">
-            <!-- Matrix Rows Render Here -->
-          </tbody>
+            </tbody>
         </table>
       </div>
     </div>
 
-    <!-- Management Overview Panel (Group 5 Executive) -->
     <div id="view-group5" class="view-panel" style="display: none;">
       <div class="header-container">
         <div>
           <h1>Group 5 — Executive Dashboard</h1>
-          <p class="subtitle">Real-time Top 5 Winners across all operational branches.</p>
+          <p class="subtitle">Real-time Top 5 Winners & Top 5 Losers across all operational branches.</p>
         </div>
       </div>
       <div id="management-tables-container" class="dashboard-grid">
-        <!-- Live Executive Cards Render Here -->
-      </div>
+        </div>
     </div>
 
   </main>
 
-  <!-- Firebase Compatibility SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <!-- Main Application Logic -->
   <script src="app.js"></script>
 </body>
 </html>
