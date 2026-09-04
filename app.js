@@ -1,8 +1,8 @@
-// Firebase Configuration (using your project keys)
+// Firebase Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyA7aW_ZjQ70syN6SigrdPO_v0BB4E8HJv0",
   authDomain: "pl-system-227d1.firebaseapp.com",
-  databaseURL: "https://pl-system-227d1-default-rtdb.firebaseio.com", // Linked to your Realtime DB
+  databaseURL: "https://pl-system-227d1-default-rtdb.firebaseio.com",
   projectId: "pl-system-227d1",
   storageBucket: "pl-system-227d1.firebasestorage.app",
   messagingSenderId: "557167025195",
@@ -34,8 +34,9 @@ const shifts = ['ON', 'AM', 'PM'];
 
 let currentBranch = 'awada';
 let matrixStore = {};
+let saveDebounceTimers = {};
 
-// Live Cloud Sync: Listens for changes and updates the UI live across all screens
+// Live Listener: Updates data without disrupting active user focus
 db.ref('pl_matrix_store').on('value', (snapshot) => {
   matrixStore = snapshot.val() || {};
   
@@ -45,7 +46,10 @@ db.ref('pl_matrix_store').on('value', (snapshot) => {
   if (activeParam === 'group5') {
     renderManagementView();
   } else {
-    renderMatrixTable();
+    // Only re-render full table if user is NOT currently typing inside an input
+    if (!document.activeElement || document.activeElement.tagName !== 'INPUT') {
+      renderMatrixTable();
+    }
   }
 });
 
@@ -159,12 +163,8 @@ function calculatePercentage(client, coverage) {
 function renderMatrixTable() {
   const tbody = document.getElementById('matrix-tbody');
   if (!tbody) return;
-  
-  // Preserve focus if typing
-  const activeId = document.activeElement ? document.activeElement.id : null;
-  
-  tbody.innerHTML = '';
 
+  tbody.innerHTML = '';
   const branchData = matrixStore[currentBranch] || {};
 
   days.forEach(day => {
@@ -179,11 +179,6 @@ function renderMatrixTable() {
       }
     });
   });
-
-  if (activeId) {
-    const el = document.getElementById(activeId);
-    if (el) el.focus();
-  }
 }
 
 function renderRow(tbody, day, shift, type, rank, rowId, rowData) {
@@ -193,36 +188,36 @@ function renderRow(tbody, day, shift, type, rank, rowId, rowData) {
   const pctDisplay = calculatePercentage(row.client, row.coverage);
   const tagClass = type === 'Winner' ? 'tag-winner' : 'tag-loser';
 
-  tbody.innerHTML += `
-    <tr>
-      <td><strong>${day}</strong></td>
-      <td>${shift}</td>
-      <td><span class="${tagClass}">${type}</span></td>
-      <td>#${rank}</td>
-      <td>
-        <input id="input_login_${rowId}" class="matrix-input" value="${row.login || ''}" 
-               oninput="updateAndAutoSave('${rowId}', 'login', this.value)"
-               onkeydown="handleEnterKey(event, this)">
-      </td>
-      <td>
-        <input id="input_client_${rowId}" class="matrix-input" value="${formattedClient}" 
-               onfocus="handleInputFocus(this)" 
-               onblur="handleInputBlur('${rowId}', 'client', this)" 
-               oninput="updateAndAutoSave('${rowId}', 'client', this.value)"
-               onkeydown="handleEnterKey(event, this)"
-               placeholder="$0">
-      </td>
-      <td>
-        <input id="input_coverage_${rowId}" class="matrix-input" value="${formattedCoverage}" 
-               onfocus="handleInputFocus(this)" 
-               onblur="handleInputBlur('${rowId}', 'coverage', this)" 
-               oninput="updateAndAutoSave('${rowId}', 'coverage', this.value)"
-               onkeydown="handleEnterKey(event, this)"
-               placeholder="$0">
-      </td>
-      <td><span class="pct-badge" id="pct_${rowId}">${pctDisplay}</span></td>
-    </tr>
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><strong>${day}</strong></td>
+    <td>${shift}</td>
+    <td><span class="${tagClass}">${type}</span></td>
+    <td>#${rank}</td>
+    <td>
+      <input id="input_login_${rowId}" class="matrix-input" value="${row.login || ''}" 
+             oninput="updateLocalAndScheduleSave('${rowId}', 'login', this.value)"
+             onkeydown="handleEnterKey(event, this)">
+    </td>
+    <td>
+      <input id="input_client_${rowId}" class="matrix-input" value="${formattedClient}" 
+             onfocus="handleInputFocus(this)" 
+             onblur="handleInputBlur('${rowId}', 'client', this)" 
+             oninput="updateLocalAndScheduleSave('${rowId}', 'client', this.value)"
+             onkeydown="handleEnterKey(event, this)"
+             placeholder="$0">
+    </td>
+    <td>
+      <input id="input_coverage_${rowId}" class="matrix-input" value="${formattedCoverage}" 
+             onfocus="handleInputFocus(this)" 
+             onblur="handleInputBlur('${rowId}', 'coverage', this)" 
+             oninput="updateLocalAndScheduleSave('${rowId}', 'coverage', this.value)"
+             onkeydown="handleEnterKey(event, this)"
+             placeholder="$0">
+    </td>
+    <td><span class="pct-badge" id="pct_${rowId}">${pctDisplay}</span></td>
   `;
+  tbody.appendChild(tr);
 }
 
 function handleInputFocus(input) {
@@ -232,7 +227,7 @@ function handleInputFocus(input) {
 
 function handleInputBlur(rowId, field, input) {
   const rawNum = parseCurrencyNumber(input.value);
-  updateAndAutoSave(rowId, field, rawNum);
+  updateLocalAndScheduleSave(rowId, field, rawNum, true); // Immediate sync on blur
   
   input.value = rawNum ? formatCurrency(rawNum) : '';
 
@@ -243,18 +238,40 @@ function handleInputBlur(rowId, field, input) {
   }
 }
 
-// Instant Live Cloud Auto-Save
-function updateAndAutoSave(rowId, field, val) {
+// Local State Update + Debounced Cloud Save
+function updateLocalAndScheduleSave(rowId, field, val, immediate = false) {
   if (!matrixStore[currentBranch]) matrixStore[currentBranch] = {};
   if (!matrixStore[currentBranch][rowId]) matrixStore[currentBranch][rowId] = { login: '', client: '', coverage: '' };
   
   matrixStore[currentBranch][rowId][field] = val;
 
-  // Push directly to Firebase Realtime Database
-  db.ref(`pl_matrix_store/${currentBranch}/${rowId}/${field}`).set(val);
+  // Live calculation for Coverage % badge while typing
+  if (field === 'client' || field === 'coverage') {
+    const pctCell = document.getElementById(`pct_${rowId}`);
+    if (pctCell) {
+      const row = matrixStore[currentBranch][rowId];
+      pctCell.innerText = calculatePercentage(row.client, row.coverage);
+    }
+  }
+
+  const timerKey = `${currentBranch}_${rowId}_${field}`;
+  if (saveDebounceTimers[timerKey]) {
+    clearTimeout(saveDebounceTimers[timerKey]);
+  }
+
+  const pushToFirebase = () => {
+    db.ref(`pl_matrix_store/${currentBranch}/${rowId}/${field}`).set(val);
+  };
+
+  if (immediate) {
+    pushToFirebase();
+  } else {
+    // Wait 500ms after user stops typing before pushing to cloud
+    saveDebounceTimers[timerKey] = setTimeout(pushToFirebase, 500);
+  }
 }
 
-// Enter Key navigation (moves cursor down to next row input)
+// Enter Key navigation (moves cursor cleanly to next row)
 function handleEnterKey(event, currentInput) {
   if (event.key === 'Enter') {
     event.preventDefault();
