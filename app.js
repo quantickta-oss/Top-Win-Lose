@@ -221,7 +221,7 @@ function renderRow(tbody, day, shift, type, rank, rowId, rowData) {
   tbody.appendChild(tr);
 }
 
-// Switches input alignment to left and strips formatting on focus so cursor works 100% naturally
+// Switches input alignment to left and strips formatting on focus
 function handleInputFocus(input) {
   input.style.textAlign = 'left';
   const rawNum = parseCurrencyNumber(input.value);
@@ -275,21 +275,27 @@ function updateLocalAndScheduleSave(rowId, field, val, immediate = false) {
   }
 }
 
-// Enter Key navigation (moves cursor cleanly to next row input)
+// Seamless Enter Key Navigation across cells
 function handleEnterKey(event, currentInput) {
   if (event.key === 'Enter') {
     event.preventDefault();
-    currentInput.blur();
 
     const allInputs = Array.from(document.querySelectorAll('.matrix-input'));
     const currentIndex = allInputs.indexOf(currentInput);
 
+    // Save and format current field before jumping
+    currentInput.blur();
+
     if (currentIndex !== -1 && currentIndex + 1 < allInputs.length) {
       const nextInput = allInputs[currentIndex + 1];
-      nextInput.focus();
-      if (typeof nextInput.select === 'function') {
-        nextInput.select();
-      }
+      
+      // Use setTimeout to ensure blur completion before focusing next cell
+      setTimeout(() => {
+        nextInput.focus();
+        if (typeof nextInput.select === 'function') {
+          nextInput.select();
+        }
+      }, 10);
     }
   }
 }
