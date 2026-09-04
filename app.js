@@ -46,7 +46,7 @@ db.ref('pl_matrix_store').on('value', (snapshot) => {
   if (activeParam === 'group5') {
     renderManagementView();
   } else {
-    // Only re-render full table if user is NOT currently typing inside an input
+    // Prevent DOM redraw while editing any input
     if (!document.activeElement || document.activeElement.tagName !== 'INPUT') {
       renderMatrixTable();
     }
@@ -221,14 +221,18 @@ function renderRow(tbody, day, shift, type, rank, rowId, rowData) {
   tbody.appendChild(tr);
 }
 
+// Switches input alignment to left and strips formatting on focus so cursor works 100% naturally
 function handleInputFocus(input) {
+  input.style.textAlign = 'left';
   const rawNum = parseCurrencyNumber(input.value);
   input.value = rawNum ? rawNum : '';
 }
 
+// Formats currency and re-aligns to right on blur
 function handleInputBlur(rowId, field, input) {
+  input.style.textAlign = 'right';
   const rawNum = parseCurrencyNumber(input.value);
-  updateLocalAndScheduleSave(rowId, field, rawNum, true); // Immediate save on blur
+  updateLocalAndScheduleSave(rowId, field, rawNum, true);
   
   input.value = rawNum ? formatCurrency(rawNum) : '';
 
@@ -267,7 +271,6 @@ function updateLocalAndScheduleSave(rowId, field, val, immediate = false) {
   if (immediate) {
     pushToFirebase();
   } else {
-    // Wait 500ms after user stops typing before pushing to cloud
     saveDebounceTimers[timerKey] = setTimeout(pushToFirebase, 500);
   }
 }
