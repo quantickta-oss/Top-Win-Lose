@@ -232,7 +232,7 @@ function handleInputFocus(input) {
 function handleInputBlur(rowId, field, input) {
   input.style.textAlign = 'right';
   const rawNum = parseCurrencyNumber(input.value);
-  updateLocalAndScheduleSave(rowId, field, rawNum, false); // Standard debounced save on blur
+  updateLocalAndScheduleSave(rowId, field, rawNum, false);
   
   input.value = rawNum ? formatCurrency(rawNum) : '';
 
@@ -286,7 +286,6 @@ function handleEnterKey(event, currentInput) {
     if (index !== -1 && index + 1 < inputs.length) {
       const nextInput = inputs[index + 1];
       
-      // Delay slightly so blur handlers finish execution cleanly
       setTimeout(() => {
         nextInput.focus();
         if (typeof nextInput.select === 'function') {
@@ -304,12 +303,14 @@ function renderManagementView() {
 
   allBranches.forEach(b => {
     const bData = matrixStore[b] || {};
-    let rows = [];
+    let allEntries = [];
 
+    // Parse all populated entries for this branch
     Object.keys(bData).forEach(key => {
       const item = bData[key];
-      if (item.login && item.client) {
-        rows.push({
+      if (item.login && item.client !== undefined && item.client !== '') {
+        allEntries.push({
+          type: key.includes('_Loser_') ? 'Loser' : 'Winner',
           login: item.login,
           client: parseCurrencyNumber(item.client),
           coverage: parseCurrencyNumber(item.coverage)
@@ -317,7 +318,11 @@ function renderManagementView() {
       }
     });
 
-    const winners = [...rows].filter(r => r.client > 0).sort((a, b) => b.client - a.client).slice(0, 5);
+    // 1. Top 5 Winners (Sorted by highest positive P/L)
+    const winners = allEntries
+      .filter(r => r.type === 'Winner' || r.client > 0)
+      .sort((a, b) => Math.abs(b.client) - Math.abs(a.client))
+      .slice(0, 5);
 
     let winnersHTML = winners.map((w, i) => `
       <tr>
@@ -328,6 +333,22 @@ function renderManagementView() {
       </tr>
     `).join('') || '<tr><td colspan="4" style="text-align:center;color:#64748b;">No data entered</td></tr>';
 
+    // 2. Top 5 Losers (Sorted by largest loss)
+    const losers = allEntries
+      .filter(r => r.type === 'Loser' || r.client < 0)
+      .sort((a, b) => Math.abs(b.client) - Math.abs(a.client))
+      .slice(0, 5);
+
+    let losersHTML = losers.map((l, i) => `
+      <tr>
+        <td>#${i + 1}</td>
+        <td><strong>${l.login}</strong></td>
+        <td class="tag-loser">${formatCurrency(l.client)}</td>
+        <td>${formatCurrency(l.coverage)}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="4" style="text-align:center;color:#64748b;">No data entered</td></tr>';
+
+    // Render cards for both Top 5 Winners and Top 5 Losers per branch
     container.innerHTML += `
       <div class="branch-card">
         <h3>${b.toUpperCase()} — Top 5 Winners</h3>
@@ -341,6 +362,21 @@ function renderManagementView() {
             </tr>
           </thead>
           <tbody>${winnersHTML}</tbody>
+        </table>
+      </div>
+
+      <div class="branch-card">
+        <h3>${b.toUpperCase()} — Top 5 Losers</h3>
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th>RANK</th>
+              <th>LOGIN</th>
+              <th>CLIENT P/L</th>
+              <th>COVERAGE P/L</th>
+            </tr>
+          </thead>
+          <tbody>${losersHTML}</tbody>
         </table>
       </div>
     `;
