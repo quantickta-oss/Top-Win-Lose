@@ -3,136 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Standalone P/L Management Console</title>
+  <title>P/L Enterprise Matrix</title>
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-  <!-- Top Navigation -->
-  <header class="navbar">
-    <div class="logo">P/L <span>SYSTEM</span></div>
-    <nav class="nav-links">
-      <button class="nav-btn active" onclick="switchView('group5', this)">Group 5 (Executive)</button>
-      <button class="nav-btn" onclick="switchView('operators', this)">Daily Shift Logger</button>
-    </nav>
-    <button class="reset-btn" onclick="clearAllData()">Reset All Data</button>
-  </header>
+  <aside class="sidebar">
+    <div class="brand">P/L <span>SYSTEM</span></div>
+    
+    <div class="nav-section">MANAGEMENT</div>
+    <button class="nav-item active" onclick="switchTab('group5', this)">
+      <span class="icon">📊</span> Group 5 (Executive)
+    </button>
 
-  <main class="container">
+    <div class="nav-section">BRANCH LOGS</div>
+    <button class="nav-item" onclick="switchTab('bbc', this)"><span class="icon">🏢</span> BBC P/L</button>
+    <button class="nav-item" onclick="switchTab('badaro', this)"><span class="icon">🏢</span> Badaro P/L</button>
+    <button class="nav-item" onclick="switchTab('tajco', this)"><span class="icon">🏢</span> Tajco P/L</button>
+    <button class="nav-item" onclick="switchTab('cdi', this)"><span class="icon">🏢</span> CDI P/L</button>
+    <button class="nav-item" onclick="switchTab('connect', this)"><span class="icon">🏢</span> Connect P/L</button>
+  </aside>
 
-    <!-- Group 5 Executive Dashboard -->
-    <section id="view-group5" class="dashboard-view active">
-      <div class="view-header">
-        <h1>Group 5: Executive Weekly Dashboard</h1>
-        <p>Consolidated top winners and losers generated automatically from shift logs.</p>
+  <main class="content-area">
+
+    <section id="view-group5" class="view-panel active">
+      <div class="header">
+        <h1>Group 5: Management Executive Summaries</h1>
+        <p>Dedicated Top 5 Weekly Performers split by individual branch.</p>
       </div>
 
-      <div class="stats-grid">
-        <div class="stat-card green">
-          <span class="stat-title">Top Weekly Winner</span>
-          <span class="stat-value" id="top-gain-val">$0.00</span>
-          <span class="stat-sub" id="top-gain-trader">No data logged</span>
+      <div class="management-grid" id="management-tables-container">
         </div>
-        <div class="stat-card red">
-          <span class="stat-title">Top Weekly Loser</span>
-          <span class="stat-value" id="top-loss-val">$0.00</span>
-          <span class="stat-sub" id="top-loss-trader">No data logged</span>
-        </div>
-      </div>
-
-      <div class="table-container">
-        <h3>Top Performers (By Client P/L)</h3>
-        <table id="mgmt-winners-table">
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Login</th>
-              <th>Branch</th>
-              <th>Client P/L</th>
-              <th>Coverage P/L</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <div class="table-container">
-        <h3>Top Losses (By Client P/L)</h3>
-        <table id="mgmt-losers-table">
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Login</th>
-              <th>Branch</th>
-              <th>Client Loss</th>
-              <th>Coverage P/L</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
     </section>
 
-    <!-- Shift Logging Interface -->
-    <section id="view-operators" class="dashboard-view">
-      <div class="view-header">
-        <h1>Daily Shift Logger</h1>
-        <p>Enter shift results directly into the system database.</p>
+    <section id="view-matrix" class="view-panel">
+      <div class="header-flex">
+        <div>
+          <h1 id="matrix-title">BBC Weekly Operational Matrix</h1>
+          <p>Pre-structured weekly schedule. Enter values directly into the matrix cells.</p>
+        </div>
+        <button class="save-btn" onclick="saveMatrixData()">Save All Changes</button>
       </div>
 
-      <div class="form-container">
-        <form id="shift-form" onsubmit="handleLogSubmit(event)">
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Branch</label>
-              <select id="input-branch" required>
-                <option value="BBC">BBC</option>
-                <option value="Badaro">Badaro</option>
-                <option value="Tajco">Tajco</option>
-                <option value="CDI">CDI</option>
-                <option value="Connect">Connect</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Shift</label>
-              <select id="input-shift" required>
-                <option value="ON">ON (Overnight)</option>
-                <option value="AM">AM</option>
-                <option value="PM">PM</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Trader Login ID</label>
-              <input type="text" id="input-login" placeholder="e.g. 14517" required>
-            </div>
-            <div class="form-group">
-              <label>Client P/L ($)</label>
-              <input type="number" step="0.01" id="input-client" placeholder="e.g. 5000 or -2500" required>
-            </div>
-            <div class="form-group">
-              <label>Coverage P/L ($)</label>
-              <input type="number" step="0.01" id="input-coverage" placeholder="e.g. 1200" value="0">
-            </div>
-          </div>
-          <button type="submit" class="submit-btn">Add Entry</button>
-        </form>
-      </div>
-
-      <div class="table-container">
-        <h3>Logged Entries</h3>
-        <table id="logs-table">
+      <div class="matrix-wrapper">
+        <table class="matrix-table" id="weekly-matrix-table">
           <thead>
             <tr>
-              <th>Branch</th>
+              <th>Day</th>
               <th>Shift</th>
-              <th>Login</th>
-              <th>Client P/L</th>
-              <th>Coverage P/L</th>
-              <th>Action</th>
+              <th>Type</th>
+              <th>Rank</th>
+              <th>Trader Login</th>
+              <th>Client P/L ($)</th>
+              <th>Coverage P/L ($)</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody id="matrix-tbody">
+            </tbody>
         </table>
       </div>
     </section>
