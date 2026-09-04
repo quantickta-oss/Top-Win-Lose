@@ -19,65 +19,65 @@ const shifts = ['ON', 'AM', 'PM'];
 let currentBranch = 'awada';
 let matrixStore = JSON.parse(localStorage.getItem('pl_matrix_store')) || {};
 
-function restrictSidebar(allowedTabs) {
-  const allNavItems = document.querySelectorAll('.nav-item');
-  const groupHeaders = document.querySelectorAll('.sidebar h4, .sidebar .group-title');
+function applySidebarLock(allowedTabs) {
+  const isGroup5 = allowedTabs.includes('group5');
 
-  allNavItems.forEach(btn => {
+  // 1. Filter and toggle sidebar navigation buttons
+  document.querySelectorAll('.nav-item').forEach(btn => {
     const onclickAttr = btn.getAttribute('onclick') || '';
-    let matches = false;
+    const isAllowed = allowedTabs.some(tab => onclickAttr.includes(`'${tab}'`));
 
-    allowedTabs.forEach(tab => {
-      if (onclickAttr.includes(`'${tab}'`)) {
-        matches = true;
-      }
-    });
-
-    if (matches) {
-      btn.style.display = 'block';
+    if (isAllowed) {
+      btn.style.setProperty('display', 'flex', 'important');
     } else {
-      btn.style.display = 'none';
+      btn.style.setProperty('display', 'none', 'important');
     }
   });
 
-  // Hide empty category headers in sidebar
-  groupHeaders.forEach(header => {
-    let hasVisibleSibling = false;
-    let next = header.nextElementSibling;
-    while (next && !next.tagName.startsWith('H')) {
-      if (next.classList.contains('nav-item') && next.style.display !== 'none') {
-        hasVisibleSibling = true;
-        break;
+  // 2. Filter section headers (GROUP 1, GROUP 2, etc.) dynamically
+  document.querySelectorAll('.nav-section').forEach(sec => {
+    if (isGroup5) {
+      sec.style.setProperty('display', 'block', 'important');
+    } else {
+      let hasVisibleChild = false;
+      let nextElem = sec.nextElementSibling;
+
+      while (nextElem && !nextElem.classList.contains('nav-section')) {
+        if (nextElem.classList.contains('nav-item') && nextElem.style.display !== 'none') {
+          hasVisibleChild = true;
+          break;
+        }
+        nextElem = nextElem.nextElementSibling;
       }
-      next = next.nextElementSibling;
+
+      if (hasVisibleChild) {
+        sec.style.setProperty('display', 'block', 'important');
+      } else {
+        sec.style.setProperty('display', 'none', 'important');
+      }
     }
-    header.style.display = hasVisibleSibling ? 'block' : 'none';
   });
 }
 
 function switchTab(tabKey) {
-  // Check URL permissions
   const urlParams = new URLSearchParams(window.location.search);
   const activeParam = (urlParams.get('branch') || 'group5').toLowerCase();
   const allowedTabs = branchGroups[activeParam] || [activeParam];
 
-  // Prevent accessing unauthorized branches via code
+  // Prevent unauthorized branch tab switching
   if (!allowedTabs.includes(tabKey) && activeParam !== 'group5') {
     tabKey = activeParam;
   }
 
-  // Hide all view panels
-  const allPanels = document.querySelectorAll('.view-panel');
-  allPanels.forEach(panel => {
+  // Hide view panels
+  document.querySelectorAll('.view-panel').forEach(panel => {
     panel.classList.remove('active');
     panel.style.display = 'none';
   });
 
-  // Manage navigation highlights
-  const allNavItems = document.querySelectorAll('.nav-item');
-  allNavItems.forEach(btn => btn.classList.remove('active'));
-
-  allNavItems.forEach(btn => {
+  // Update button active state
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.classList.remove('active');
     const onclickAttr = btn.getAttribute('onclick') || '';
     if (onclickAttr.includes(`'${tabKey}'`)) {
       btn.classList.add('active');
@@ -266,17 +266,21 @@ function renderManagementView() {
   });
 }
 
-function routeFromURL() {
+function initApp() {
   const urlParams = new URLSearchParams(window.location.search);
   const branchParam = (urlParams.get('branch') || 'group5').toLowerCase();
-
   const allowedTabs = branchGroups[branchParam] || [branchParam];
-  
-  // Enforce locked sidebar navigation
-  restrictSidebar(allowedTabs);
 
-  // Switch tab directly to requested branch
+  // Apply dynamic lock down across all groups
+  applySidebarLock(allowedTabs);
+
+  // Switch to requested branch tab
   switchTab(branchParam);
 }
 
-window.onload = routeFromURL;
+// Run routing immediately on load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
