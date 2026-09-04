@@ -1,119 +1,124 @@
-let entries = JSON.parse(localStorage.getItem('pl_entries')) || [];
+const branches = ['bbc', 'badaro', 'tajco', 'cdi', 'connect'];
+const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const shifts = ['ON', 'AM', 'PM'];
 
-function switchView(viewId, btn) {
-  document.querySelectorAll('.dashboard-view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+let currentBranch = 'bbc';
+let matrixStore = JSON.parse(localStorage.getItem('pl_matrix_store')) || {};
+
+function switchTab(tabKey, btn) {
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.view-panel').forEach(v => v.classList.remove('active'));
   
-  document.getElementById('view-' + viewId).classList.add('active');
   btn.classList.add('active');
 
-  if (viewId === 'group5') renderManagementDashboard();
-  if (viewId === 'operators') renderLogsTable();
-}
-
-function handleLogSubmit(e) {
-  e.preventDefault();
-
-  const newEntry = {
-    id: Date.now(),
-    branch: document.getElementById('input-branch').value,
-    shift: document.getElementById('input-shift').value,
-    login: document.getElementById('input-login').value,
-    clientPL: parseFloat(document.getElementById('input-client').value),
-    coveragePL: parseFloat(document.getElementById('input-coverage').value) || 0
-  };
-
-  entries.push(newEntry);
-  localStorage.setItem('pl_entries', JSON.stringify(entries));
-
-  document.getElementById('shift-form').reset();
-  renderLogsTable();
-}
-
-function deleteEntry(id) {
-  entries = entries.filter(item => item.id !== id);
-  localStorage.setItem('pl_entries', JSON.stringify(entries));
-  renderLogsTable();
-}
-
-function clearAllData() {
-  if (confirm("Are you sure you want to delete all entries?")) {
-    entries = [];
-    localStorage.removeItem('pl_entries');
-    renderLogsTable();
-    renderManagementDashboard();
+  if (tabKey === 'group5') {
+    document.getElementById('view-group5').classList.add('active');
+    renderManagementView();
+  } else {
+    currentBranch = tabKey;
+    document.getElementById('view-matrix').classList.add('active');
+    document.getElementById('matrix-title').innerText = tabKey.toUpperCase() + " Weekly Operational Matrix";
+    renderMatrixTable();
   }
 }
 
-function renderLogsTable() {
-  const tbody = document.querySelector('#logs-table tbody');
+function renderMatrixTable() {
+  const tbody = document.getElementById('matrix-tbody');
   tbody.innerHTML = '';
 
-  entries.forEach(item => {
-    const isPositive = item.clientPL >= 0;
-    tbody.innerHTML += `
-      <tr>
-        <td>${item.branch}</td>
-        <td>${item.shift}</td>
-        <td><strong>${item.login}</strong></td>
-        <td class="${isPositive ? 'positive' : 'negative'}">$${item.clientPL.toLocaleString()}</td>
-        <td>$${item.coveragePL.toLocaleString()}</td>
-        <td><button class="delete-btn" onclick="deleteEntry(${item.id})">Delete</button></td>
-      </tr>
-    `;
+  const branchData = matrixStore[currentBranch] || {};
+
+  days.forEach(day => {
+    shifts.forEach(shift => {
+      // Top 3 Winners
+      for (let r = 1; r <= 3; r++) {
+        const rowId = `${day}_${shift}_Winner_${r}`;
+        const row = branchData[rowId] || { login: '', client: '', coverage: '' };
+        
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${day}</strong></td>
+            <td><span class="shift-badge">${shift}</span></td>
+            <td><span class="tag-winner">Winner</span></td>
+            <td>#${r}</td>
+            <td><input class="matrix-input" value="${row.login}" onchange="updateCell('${rowId}', 'login', this.value)"></td>
+            <td><input class="matrix-input" type="number" value="${row.client}" onchange="updateCell('${rowId}', 'client', this.value)"></td>
+            <td><input class="matrix-input" type="number" value="${row.coverage}" onchange="updateCell('${rowId}', 'coverage', this.value)"></td>
+          </tr>
+        `;
+      }
+      // Top 3 Losers
+      for (let r = 1; r <= 3; r++) {
+        const rowId = `${day}_${shift}_Loser_${r}`;
+        const row = branchData[rowId] || { login: '', client: '', coverage: '' };
+        
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${day}</strong></td>
+            <td><span class="shift-badge">${shift}</span></td>
+            <td><span class="tag-loser">Loser</span></td>
+            <td>#${r}</td>
+            <td><input class="matrix-input" value="${row.login}" onchange="updateCell('${rowId}', 'login', this.value)"></td>
+            <td><input class="matrix-input" type="number" value="${row.client}" onchange="updateCell('${rowId}', 'client', this.value)"></td>
+            <td><input class="matrix-input" type="number" value="${row.coverage}" onchange="updateCell('${rowId}', 'coverage', this.value)"></td>
+          </tr>
+        `;
+      }
+    });
   });
 }
 
-function renderManagementDashboard() {
-  const winnersBody = document.querySelector('#mgmt-winners-table tbody');
-  const losersBody = document.querySelector('#mgmt-losers-table tbody');
+function updateCell(rowId, field, val) {
+  if (!matrixStore[currentBranch]) matrixStore[currentBranch] = {};
+  if (!matrixStore[currentBranch][rowId]) matrixStore[currentBranch][rowId] = { login: '', client: '', coverage: '' };
+  
+  matrixStore[currentBranch][rowId][field] = val;
+}
 
-  winnersBody.innerHTML = '';
-  losersBody.innerHTML = '';
+function saveMatrixData() {
+  localStorage.setItem('pl_matrix_store', JSON.stringify(matrixStore));
+  alert('Operational Matrix saved successfully!');
+}
 
-  const winners = entries.filter(e => e.clientPL > 0).sort((a, b) => b.clientPL - a.clientPL).slice(0, 5);
-  const losers = entries.filter(e => e.clientPL < 0).sort((a, b) => a.clientPL - b.clientPL).slice(0, 5);
+function renderManagementView() {
+  const container = document.getElementById('management-tables-container');
+  container.innerHTML = '';
 
-  if (winners.length > 0) {
-    document.getElementById('top-gain-val').innerText = "+$" + winners[0].clientPL.toLocaleString();
-    document.getElementById('top-gain-trader').innerText = `Trader ${winners[0].login} (${winners[0].branch})`;
-  } else {
-    document.getElementById('top-gain-val').innerText = "$0.00";
-    document.getElementById('top-gain-trader').innerText = "No data logged";
-  }
+  branches.forEach(b => {
+    const bData = matrixStore[b] || {};
+    let rows = [];
 
-  if (losers.length > 0) {
-    document.getElementById('top-loss-val').innerText = "$" + losers[0].clientPL.toLocaleString();
-    document.getElementById('top-loss-trader').innerText = `Trader ${losers[0].login} (${losers[0].branch})`;
-  } else {
-    document.getElementById('top-loss-val').innerText = "$0.00";
-    document.getElementById('top-loss-trader').innerText = "No data logged";
-  }
+    Object.keys(bData).forEach(key => {
+      const item = bData[key];
+      if (item.login && item.client) {
+        rows.push({ login: item.login, client: parseFloat(item.client) || 0, coverage: parseFloat(item.coverage) || 0 });
+      }
+    });
 
-  winners.forEach((w, i) => {
-    winnersBody.innerHTML += `
+    const winners = [...rows].filter(r => r.client > 0).sort((a,b) => b.client - a.client).slice(0, 5);
+
+    let winnersHTML = winners.map((w, i) => `
       <tr>
-        <td>${i + 1}</td>
+        <td>#${i+1}</td>
         <td><strong>${w.login}</strong></td>
-        <td>${w.branch}</td>
-        <td class="positive">+$${w.clientPL.toLocaleString()}</td>
-        <td>$${w.coveragePL.toLocaleString()}</td>
+        <td class="tag-winner">+$${w.client.toLocaleString()}</td>
+        <td>$${w.coverage.toLocaleString()}</td>
       </tr>
-    `;
-  });
+    `).join('');
 
-  losers.forEach((l, i) => {
-    losersBody.innerHTML += `
-      <tr>
-        <td>${i + 1}</td>
-        <td><strong>${l.login}</strong></td>
-        <td>${l.branch}</td>
-        <td class="negative">$${l.clientPL.toLocaleString()}</td>
-        <td>$${l.coveragePL.toLocaleString()}</td>
-      </tr>
+    container.innerHTML += `
+      <div class="branch-card">
+        <h3>${b.toUpperCase()} — Top 5 Winners</h3>
+        <table class="matrix-table">
+          <thead>
+            <tr><th>Rank</th><th>Login</th><th>Client P/L</th><th>Coverage P/L</th></tr>
+          </thead>
+          <tbody>${winnersHTML || '<tr><td colspan="4" style="text-align:center;color:#64748b;">No data entered</td></tr>'}</tbody>
+        </table>
+      </div>
     `;
   });
 }
 
-// Initial render
-renderManagementDashboard();
+// Initial Load
+renderMatrixTable();
