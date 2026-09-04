@@ -1,12 +1,3 @@
-// Complete list of groups and their respective branches
-const groups = {
-  "Group 1": ["awada", "fawaz"],
-  "Group 2": ["boudani", "issa"],
-  "Group 3": ["bbc", "badaro", "tajco"],
-  "Group 4": ["cdi", "connect"]
-};
-
-// All 9 active branches flattened into one list
 const allBranches = ["awada", "fawaz", "boudani", "issa", "bbc", "badaro", "tajco", "cdi", "connect"];
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -32,6 +23,29 @@ function switchTab(tabKey, btn) {
   }
 }
 
+// Utility: Convert raw text or formatted currency string to number
+function parseCurrencyNumber(val) {
+  if (!val) return 0;
+  const clean = val.toString().replace(/[^0-9.-]+/g, "");
+  return parseFloat(clean) || 0;
+}
+
+// Utility: Format raw number into $1,234 style
+function formatCurrency(val) {
+  const num = parseCurrencyNumber(val);
+  if (!num && num !== 0) return '';
+  return (num < 0 ? '-' : '') + '$' + Math.abs(num).toLocaleString('en-US');
+}
+
+// Utility: Calculate Percentage
+function calculatePercentage(client, coverage) {
+  const c = parseCurrencyNumber(client);
+  const cov = parseCurrencyNumber(coverage);
+  if (!c || c === 0) return '-';
+  const pct = (cov / c) * 100;
+  return pct.toFixed(2) + '%';
+}
+
 function renderMatrixTable() {
   const tbody = document.getElementById('matrix-tbody');
   tbody.innerHTML = '';
@@ -43,39 +57,65 @@ function renderMatrixTable() {
       // Top 3 Winners
       for (let r = 1; r <= 3; r++) {
         const rowId = `${day}_${shift}_Winner_${r}`;
-        const row = branchData[rowId] || { login: '', client: '', coverage: '' };
-        
-        tbody.innerHTML += `
-          <tr>
-            <td><strong>${day}</strong></td>
-            <td>${shift}</td>
-            <td><span class="tag-winner">Winner</span></td>
-            <td>#${r}</td>
-            <td><input class="matrix-input" value="${row.login || ''}" onchange="updateCell('${rowId}', 'login', this.value)"></td>
-            <td><input class="matrix-input" type="number" value="${row.client || ''}" onchange="updateCell('${rowId}', 'client', this.value)"></td>
-            <td><input class="matrix-input" type="number" value="${row.coverage || ''}" onchange="updateCell('${rowId}', 'coverage', this.value)"></td>
-          </tr>
-        `;
+        renderRow(tbody, day, shift, 'Winner', r, rowId, branchData[rowId]);
       }
       // Top 3 Losers
       for (let r = 1; r <= 3; r++) {
         const rowId = `${day}_${shift}_Loser_${r}`;
-        const row = branchData[rowId] || { login: '', client: '', coverage: '' };
-        
-        tbody.innerHTML += `
-          <tr>
-            <td><strong>${day}</strong></td>
-            <td>${shift}</td>
-            <td><span class="tag-loser">Loser</span></td>
-            <td>#${r}</td>
-            <td><input class="matrix-input" value="${row.login || ''}" onchange="updateCell('${rowId}', 'login', this.value)"></td>
-            <td><input class="matrix-input" type="number" value="${row.client || ''}" onchange="updateCell('${rowId}', 'client', this.value)"></td>
-            <td><input class="matrix-input" type="number" value="${row.coverage || ''}" onchange="updateCell('${rowId}', 'coverage', this.value)"></td>
-          </tr>
-        `;
+        renderRow(tbody, day, shift, 'Loser', r, rowId, branchData[rowId]);
       }
     });
   });
+}
+
+function renderRow(tbody, day, shift, type, rank, rowId, rowData) {
+  const row = rowData || { login: '', client: '', coverage: '' };
+  const formattedClient = row.client ? formatCurrency(row.client) : '';
+  const formattedCoverage = row.coverage ? formatCurrency(row.coverage) : '';
+  const pctDisplay = calculatePercentage(row.client, row.coverage);
+  const tagClass = type === 'Winner' ? 'tag-winner' : 'tag-loser';
+
+  tbody.innerHTML += `
+    <tr>
+      <td><strong>${day}</strong></td>
+      <td>${shift}</td>
+      <td><span class="${tagClass}">${type}</span></td>
+      <td>#${rank}</td>
+      <td><input class="matrix-input" value="${row.login || ''}" onchange="updateCell('${rowId}', 'login', this.value)"></td>
+      <td>
+        <input class="matrix-input" value="${formattedClient}" 
+               onfocus="handleInputFocus(this)" 
+               onblur="handleInputBlur('${rowId}', 'client', this)" 
+               placeholder="$0">
+      </td>
+      <td>
+        <input class="matrix-input" value="${formattedCoverage}" 
+               onfocus="handleInputFocus(this)" 
+               onblur="handleInputBlur('${rowId}', 'coverage', this)" 
+               placeholder="$0">
+      </td>
+      <td><span class="pct-badge" id="pct_${rowId}">${pctDisplay}</span></td>
+    </tr>
+  `;
+}
+
+function handleInputFocus(input) {
+  const rawNum = parseCurrencyNumber(input.value);
+  input.value = rawNum ? rawNum : '';
+}
+
+function handleInputBlur(rowId, field, input) {
+  const rawNum = parseCurrencyNumber(input.value);
+  updateCell(rowId, field, rawNum);
+  
+  input.value = rawNum ? formatCurrency(rawNum) : '';
+
+  // Update % cell dynamically
+  const rowData = (matrixStore[currentBranch] || {})[rowId] || {};
+  const pctCell = document.getElementById(`pct_${rowId}`);
+  if (pctCell) {
+    pctCell.innerText = calculatePercentage(rowData.client, rowData.coverage);
+  }
 }
 
 function updateCell(rowId, field, val) {
@@ -94,7 +134,6 @@ function renderManagementView() {
   const container = document.getElementById('management-tables-container');
   container.innerHTML = '';
 
-  // Iterating through all 9 branches explicitly
   allBranches.forEach(b => {
     const bData = matrixStore[b] || {};
     let rows = [];
@@ -104,8 +143,8 @@ function renderManagementView() {
       if (item.login && item.client) {
         rows.push({
           login: item.login,
-          client: parseFloat(item.client) || 0,
-          coverage: parseFloat(item.coverage) || 0
+          client: parseCurrencyNumber(item.client),
+          coverage: parseCurrencyNumber(item.coverage)
         });
       }
     });
@@ -116,8 +155,8 @@ function renderManagementView() {
       <tr>
         <td>#${i + 1}</td>
         <td><strong>${w.login}</strong></td>
-        <td class="tag-winner">+$${w.client.toLocaleString()}</td>
-        <td>$${w.coverage.toLocaleString()}</td>
+        <td class="tag-winner">${formatCurrency(w.client)}</td>
+        <td>${formatCurrency(w.coverage)}</td>
       </tr>
     `).join('') || '<tr><td colspan="4" style="text-align:center;color:#64748b;">No data entered</td></tr>';
 
