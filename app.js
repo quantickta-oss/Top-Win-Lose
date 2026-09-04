@@ -1,3 +1,19 @@
+// Firebase Configuration (using your project keys)
+const firebaseConfig = {
+  apiKey: "AIzaSyA7aW_ZjQ70syN6SigrdPO_v0BB4E8HJv0",
+  authDomain: "pl-system-227d1.firebaseapp.com",
+  databaseURL: "https://pl-system-227d1-default-rtdb.firebaseio.com", // Linked to your Realtime DB
+  projectId: "pl-system-227d1",
+  storageBucket: "pl-system-227d1.firebasestorage.app",
+  messagingSenderId: "557167025195",
+  appId: "1:557167025195:web:9de8f4305284ba2a045e6e",
+  measurementId: "G-1YSYFWMWTZ"
+};
+
+// Initialize Firebase Realtime Database
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 // Master Branch Access Control Mapping
 const branchGroups = {
   'awada': ['awada', 'fawaz'],
@@ -17,7 +33,21 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const shifts = ['ON', 'AM', 'PM'];
 
 let currentBranch = 'awada';
-let matrixStore = JSON.parse(localStorage.getItem('pl_matrix_store')) || {};
+let matrixStore = {};
+
+// Live Cloud Sync: Listens for changes and updates the UI live across all screens
+db.ref('pl_matrix_store').on('value', (snapshot) => {
+  matrixStore = snapshot.val() || {};
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const activeParam = (urlParams.get('branch') || 'group5').toLowerCase();
+  
+  if (activeParam === 'group5') {
+    renderManagementView();
+  } else {
+    renderMatrixTable();
+  }
+});
 
 function applySidebarLock(allowedTabs) {
   const isGroup5 = allowedTabs.includes('group5');
@@ -105,7 +135,7 @@ function switchTab(tabKey) {
   window.scrollTo(0, 0);
 }
 
-// Formatting utilities
+// Currency & Math Utilities
 function parseCurrencyNumber(val) {
   if (!val && val !== 0) return 0;
   const clean = val.toString().replace(/[^0-9.-]+/g, "");
@@ -129,6 +159,10 @@ function calculatePercentage(client, coverage) {
 function renderMatrixTable() {
   const tbody = document.getElementById('matrix-tbody');
   if (!tbody) return;
+  
+  // Preserve focus if typing
+  const activeId = document.activeElement ? document.activeElement.id : null;
+  
   tbody.innerHTML = '';
 
   const branchData = matrixStore[currentBranch] || {};
@@ -145,6 +179,11 @@ function renderMatrixTable() {
       }
     });
   });
+
+  if (activeId) {
+    const el = document.getElementById(activeId);
+    if (el) el.focus();
+  }
 }
 
 function renderRow(tbody, day, shift, type, rank, rowId, rowData) {
@@ -161,12 +200,12 @@ function renderRow(tbody, day, shift, type, rank, rowId, rowData) {
       <td><span class="${tagClass}">${type}</span></td>
       <td>#${rank}</td>
       <td>
-        <input class="matrix-input col-login" value="${row.login || ''}" 
+        <input id="input_login_${rowId}" class="matrix-input" value="${row.login || ''}" 
                oninput="updateAndAutoSave('${rowId}', 'login', this.value)"
                onkeydown="handleEnterKey(event, this)">
       </td>
       <td>
-        <input class="matrix-input col-client" value="${formattedClient}" 
+        <input id="input_client_${rowId}" class="matrix-input" value="${formattedClient}" 
                onfocus="handleInputFocus(this)" 
                onblur="handleInputBlur('${rowId}', 'client', this)" 
                oninput="updateAndAutoSave('${rowId}', 'client', this.value)"
@@ -174,7 +213,7 @@ function renderRow(tbody, day, shift, type, rank, rowId, rowData) {
                placeholder="$0">
       </td>
       <td>
-        <input class="matrix-input col-coverage" value="${formattedCoverage}" 
+        <input id="input_coverage_${rowId}" class="matrix-input" value="${formattedCoverage}" 
                onfocus="handleInputFocus(this)" 
                onblur="handleInputBlur('${rowId}', 'coverage', this)" 
                oninput="updateAndAutoSave('${rowId}', 'coverage', this.value)"
@@ -204,21 +243,21 @@ function handleInputBlur(rowId, field, input) {
   }
 }
 
-// Auto-Saves instantly on every input entry
+// Instant Live Cloud Auto-Save
 function updateAndAutoSave(rowId, field, val) {
   if (!matrixStore[currentBranch]) matrixStore[currentBranch] = {};
   if (!matrixStore[currentBranch][rowId]) matrixStore[currentBranch][rowId] = { login: '', client: '', coverage: '' };
   
   matrixStore[currentBranch][rowId][field] = val;
-  localStorage.setItem('pl_matrix_store', JSON.stringify(matrixStore));
+
+  // Push directly to Firebase Realtime Database
+  db.ref(`pl_matrix_store/${currentBranch}/${rowId}/${field}`).set(val);
 }
 
-// Pressing ENTER automatically jumps directly down to the next input field
+// Enter Key navigation (moves cursor down to next row input)
 function handleEnterKey(event, currentInput) {
   if (event.key === 'Enter') {
     event.preventDefault();
-    
-    // Trigger blur/format logic if active
     currentInput.blur();
 
     const allInputs = Array.from(document.querySelectorAll('.matrix-input'));
