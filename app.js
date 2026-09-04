@@ -275,7 +275,7 @@ function updateLocalAndScheduleSave(rowId, field, val, immediate = false) {
   }
 }
 
-// Seamless Enter Key Navigation across cells
+// Direct focus navigation without explicit blur calls
 function handleEnterKey(event, currentInput) {
   if (event.key === 'Enter') {
     event.preventDefault();
@@ -283,19 +283,12 @@ function handleEnterKey(event, currentInput) {
     const allInputs = Array.from(document.querySelectorAll('.matrix-input'));
     const currentIndex = allInputs.indexOf(currentInput);
 
-    // Save and format current field before jumping
-    currentInput.blur();
-
     if (currentIndex !== -1 && currentIndex + 1 < allInputs.length) {
       const nextInput = allInputs[currentIndex + 1];
-      
-      // Use setTimeout to ensure blur completion before focusing next cell
-      setTimeout(() => {
-        nextInput.focus();
-        if (typeof nextInput.select === 'function') {
-          nextInput.select();
-        }
-      }, 10);
+      nextInput.focus();
+      if (typeof nextInput.select === 'function') {
+        nextInput.select();
+      }
     }
   }
 }
