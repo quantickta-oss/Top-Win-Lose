@@ -1,21 +1,71 @@
-// Complete list of groups and their respective branches
-const groups = {
-  "Group 1": ["awada", "fawaz"],
-  "Group 2": ["boudani", "issa"],
-  "Group 3": ["bbc", "badaro", "tajco"],
-  "Group 4": ["cdi", "connect"]
+// Master Branch Access Control Mapping
+const branchGroups = {
+  'awada': ['awada', 'fawaz'],
+  'fawaz': ['awada', 'fawaz'],
+  'boudani': ['boudani', 'issa'],
+  'issa': ['boudani', 'issa'],
+  'bbc': ['bbc', 'badaro', 'tajco'],
+  'badaro': ['bbc', 'badaro', 'tajco'],
+  'tajco': ['bbc', 'badaro', 'tajco'],
+  'cdi': ['cdi', 'connect'],
+  'connect': ['cdi', 'connect'],
+  'group5': ['awada', 'fawaz', 'boudani', 'issa', 'bbc', 'badaro', 'tajco', 'cdi', 'connect', 'group5']
 };
 
-// All 9 active branches
 const allBranches = ["awada", "fawaz", "boudani", "issa", "bbc", "badaro", "tajco", "cdi", "connect"];
-
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const shifts = ['ON', 'AM', 'PM'];
 
 let currentBranch = 'awada';
 let matrixStore = JSON.parse(localStorage.getItem('pl_matrix_store')) || {};
 
+function restrictSidebar(allowedTabs) {
+  const allNavItems = document.querySelectorAll('.nav-item');
+  const groupHeaders = document.querySelectorAll('.sidebar h4, .sidebar .group-title');
+
+  allNavItems.forEach(btn => {
+    const onclickAttr = btn.getAttribute('onclick') || '';
+    let matches = false;
+
+    allowedTabs.forEach(tab => {
+      if (onclickAttr.includes(`'${tab}'`)) {
+        matches = true;
+      }
+    });
+
+    if (matches) {
+      btn.style.display = 'block';
+    } else {
+      btn.style.display = 'none';
+    }
+  });
+
+  // Hide empty category headers in sidebar
+  groupHeaders.forEach(header => {
+    let hasVisibleSibling = false;
+    let next = header.nextElementSibling;
+    while (next && !next.tagName.startsWith('H')) {
+      if (next.classList.contains('nav-item') && next.style.display !== 'none') {
+        hasVisibleSibling = true;
+        break;
+      }
+      next = next.nextElementSibling;
+    }
+    header.style.display = hasVisibleSibling ? 'block' : 'none';
+  });
+}
+
 function switchTab(tabKey) {
+  // Check URL permissions
+  const urlParams = new URLSearchParams(window.location.search);
+  const activeParam = (urlParams.get('branch') || 'group5').toLowerCase();
+  const allowedTabs = branchGroups[activeParam] || [activeParam];
+
+  // Prevent accessing unauthorized branches via code
+  if (!allowedTabs.includes(tabKey) && activeParam !== 'group5') {
+    tabKey = activeParam;
+  }
+
   // Hide all view panels
   const allPanels = document.querySelectorAll('.view-panel');
   allPanels.forEach(panel => {
@@ -23,11 +73,10 @@ function switchTab(tabKey) {
     panel.style.display = 'none';
   });
 
-  // Remove active highlight from all sidebar buttons
+  // Manage navigation highlights
   const allNavItems = document.querySelectorAll('.nav-item');
   allNavItems.forEach(btn => btn.classList.remove('active'));
 
-  // Highlight current active button
   allNavItems.forEach(btn => {
     const onclickAttr = btn.getAttribute('onclick') || '';
     if (onclickAttr.includes(`'${tabKey}'`)) {
@@ -35,7 +84,7 @@ function switchTab(tabKey) {
     }
   });
 
-  // Render Target View
+  // Render requested view
   if (tabKey === 'group5') {
     const group5Panel = document.getElementById('view-group5');
     if (group5Panel) {
@@ -217,16 +266,17 @@ function renderManagementView() {
   });
 }
 
-// Ensure URL routing triggers immediately
 function routeFromURL() {
   const urlParams = new URLSearchParams(window.location.search);
-  const branchParam = urlParams.get('branch');
+  const branchParam = (urlParams.get('branch') || 'group5').toLowerCase();
 
-  if (branchParam) {
-    switchTab(branchParam.toLowerCase());
-  } else {
-    switchTab('group5');
-  }
+  const allowedTabs = branchGroups[branchParam] || [branchParam];
+  
+  // Enforce locked sidebar navigation
+  restrictSidebar(allowedTabs);
+
+  // Switch tab directly to requested branch
+  switchTab(branchParam);
 }
 
 window.onload = routeFromURL;
