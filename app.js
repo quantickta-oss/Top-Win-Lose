@@ -6,7 +6,7 @@ const groups = {
   "Group 4": ["cdi", "connect"]
 };
 
-// All 9 active branches flattened into one array
+// All 9 active branches
 const allBranches = ["awada", "fawaz", "boudani", "issa", "bbc", "badaro", "tajco", "cdi", "connect"];
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -16,9 +16,21 @@ let currentBranch = 'awada';
 let matrixStore = JSON.parse(localStorage.getItem('pl_matrix_store')) || {};
 
 function switchTab(tabKey, btn) {
+  // Clear active styling on all tabs and panels
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.view-panel').forEach(v => v.classList.remove('active'));
-  
+
+  // If a button element wasn't explicitly passed, search for it in the DOM
+  if (!btn) {
+    const navButtons = document.querySelectorAll('.nav-item');
+    navButtons.forEach(b => {
+      const onclickAttr = b.getAttribute('onclick') || '';
+      if (onclickAttr.includes(`'${tabKey}'`)) {
+        btn = b;
+      }
+    });
+  }
+
   if (btn) btn.classList.add('active');
 
   if (tabKey === 'group5') {
@@ -32,14 +44,14 @@ function switchTab(tabKey, btn) {
   }
 }
 
-// Utility: Convert raw text or formatted currency string to number
+// Utility: Convert formatted string back to raw number
 function parseCurrencyNumber(val) {
   if (!val && val !== 0) return 0;
   const clean = val.toString().replace(/[^0-9.-]+/g, "");
   return parseFloat(clean) || 0;
 }
 
-// Utility: Format raw number into $1,234 style
+// Utility: Format number into currency ($1,234)
 function formatCurrency(val) {
   const num = parseCurrencyNumber(val);
   if (!num && num !== 0) return '';
@@ -188,28 +200,23 @@ function renderManagementView() {
   });
 }
 
-// Handle URL Parameters for Direct Branch Linking (e.g., ?branch=awada)
-window.addEventListener('DOMContentLoaded', () => {
+// URL Parameter Routing Initialization
+function initRouting() {
   const urlParams = new URLSearchParams(window.location.search);
   const branchParam = urlParams.get('branch');
 
   if (branchParam) {
     const targetBranch = branchParam.toLowerCase();
-    const navButtons = document.querySelectorAll('.nav-item');
-    let targetButton = null;
-
-    navButtons.forEach(btn => {
-      if (btn.getAttribute('onclick')?.includes(`'${targetBranch}'`)) {
-        targetButton = btn;
-      }
-    });
-
-    if (targetButton) {
-      switchTab(targetBranch, targetButton);
-      return;
-    }
+    switchTab(targetBranch, null);
+  } else {
+    // Default view is Group 5
+    switchTab('group5', null);
   }
+}
 
-  // Fallback to Group 5 Executive Dashboard on default load
-  renderManagementView();
-});
+// Run routing immediately when DOM is fully loaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initRouting);
+} else {
+  initRouting();
+}
