@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>P/L Enterprise Matrix</title>
+  <title>P/L SYSTEM</title>
   <link rel="stylesheet" href="styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -13,73 +12,75 @@
   <aside class="sidebar">
     <div class="brand">P/L <span>SYSTEM</span></div>
     
-    <div class="nav-section">MANAGEMENT</div>
-    <button class="nav-item active" onclick="switchTab('group5', this)">
+    <div class="nav-section management-section">MANAGEMENT</div>
+    <button class="nav-item" onclick="switchTab('group5')">
       <span class="icon">📊</span> Group 5 (Executive)
     </button>
 
     <div class="nav-section">GROUP 1</div>
-    <button class="nav-item" onclick="switchTab('awada', this)"><span class="icon">🏢</span> Awada P/L</button>
-    <button class="nav-item" onclick="switchTab('fawaz', this)"><span class="icon">🏢</span> Fawaz P/L</button>
+    <button class="nav-item" onclick="switchTab('awada')"><span class="icon">🏢</span> Awada P/L</button>
+    <button class="nav-item" onclick="switchTab('fawaz')"><span class="icon">🏢</span> Fawaz P/L</button>
 
     <div class="nav-section">GROUP 2</div>
-    <button class="nav-item" onclick="switchTab('boudani', this)"><span class="icon">🏢</span> Boudani P/L</button>
-    <button class="nav-item" onclick="switchTab('issa', this)"><span class="icon">🏢</span> Issa P/L</button>
+    <button class="nav-item" onclick="switchTab('boudani')"><span class="icon">🏢</span> Boudani P/L</button>
+    <button class="nav-item" onclick="switchTab('issa')"><span class="icon">🏢</span> Issa P/L</button>
 
     <div class="nav-section">GROUP 3</div>
-    <button class="nav-item" onclick="switchTab('bbc', this)"><span class="icon">🏢</span> BBC P/L</button>
-    <button class="nav-item" onclick="switchTab('badaro', this)"><span class="icon">🏢</span> Badaro P/L</button>
-    <button class="nav-item" onclick="switchTab('tajco', this)"><span class="icon">🏢</span> Tajco P/L</button>
+    <button class="nav-item" onclick="switchTab('bbc')"><span class="icon">🏢</span> BBC P/L</button>
+    <button class="nav-item" onclick="switchTab('badaro')"><span class="icon">🏢</span> Badaro P/L</button>
+    <button class="nav-item" onclick="switchTab('tajco')"><span class="icon">🏢</span> Tajco P/L</button>
 
     <div class="nav-section">GROUP 4</div>
-    <button class="nav-item" onclick="switchTab('cdi', this)"><span class="icon">🏢</span> CDI P/L</button>
-    <button class="nav-item" onclick="switchTab('connect', this)"><span class="icon">🏢</span> Connect P/L</button>
+    <button class="nav-item" onclick="switchTab('cdi')"><span class="icon">🏢</span> CDI P/L</button>
+    <button class="nav-item" onclick="switchTab('connect')"><span class="icon">🏢</span> Connect P/L</button>
   </aside>
 
-  <main class="content-area">
-
-    <!-- Group 5 Executive Dashboard -->
-    <section id="view-group5" class="view-panel active">
-      <div class="header">
-        <h1>Group 5: Management Executive Summaries</h1>
-        <p>Dedicated Top 5 Winners & Losers split across all 9 operational branches.</p>
-      </div>
-
-      <div class="management-grid" id="management-tables-container">
-        <!-- Dynamic Branch Top 5 Tables Render Here -->
-      </div>
-    </section>
-
-    <!-- Branch Weekly Matrix View -->
-    <section id="view-matrix" class="view-panel">
-      <div class="header-flex">
+  <!-- Main Content View -->
+  <main class="main-content">
+    
+    <!-- Operational Matrix View Panel -->
+    <div id="view-matrix" class="view-panel active">
+      <div class="header-container">
         <div>
-          <h1 id="matrix-title">Weekly Operational Matrix</h1>
-          <p>Enter shift results directly into the pre-structured weekly grid.</p>
+          <h1 id="matrix-title">AWADA Weekly Operational Matrix</h1>
+          <p class="subtitle">Enter shift results directly into the pre-structured weekly grid.</p>
         </div>
-        <button class="save-btn" onclick="saveMatrixData()">Save All Changes</button>
+        <button class="btn-primary" onclick="saveMatrixData()">Save All Changes</button>
       </div>
 
-      <div class="matrix-wrapper">
-        <table class="matrix-table" id="weekly-matrix-table">
+      <div class="table-card">
+        <table class="matrix-table">
           <thead>
             <tr>
-              <th>Day</th>
-              <th>Shift</th>
-              <th>Type</th>
-              <th>Rank</th>
-              <th>Trader Login</th>
-              <th>Client P/L ($)</th>
-              <th>Coverage P/L ($)</th>
-              <th style="width: 100px;">Coverage %</th>
+              <th>DAY</th>
+              <th>SHIFT</th>
+              <th>TYPE</th>
+              <th>RANK</th>
+              <th>TRADER LOGIN</th>
+              <th>CLIENT P/L ($)</th>
+              <th>COVERAGE P/L ($)</th>
+              <th>COVERAGE %</th>
             </tr>
           </thead>
           <tbody id="matrix-tbody">
-            <!-- Automatically Generated Weekly Rows -->
+            <!-- Dynamic Matrix Rows Render Here -->
           </tbody>
         </table>
       </div>
-    </section>
+    </div>
+
+    <!-- Management Overview Panel (Group 5) -->
+    <div id="view-group5" class="view-panel" style="display: none;">
+      <div class="header-container">
+        <div>
+          <h1>Group 5 — Executive Dashboard</h1>
+          <p class="subtitle">Real-time Top 5 Winners across all operational branches.</p>
+        </div>
+      </div>
+      <div id="management-tables-container" class="dashboard-grid">
+        <!-- Dynamic Executive Cards Render Here -->
+      </div>
+    </div>
 
   </main>
 
