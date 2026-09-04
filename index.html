@@ -9,6 +9,7 @@
 </head>
 <body>
 
+  <!-- Sidebar Navigation -->
   <aside class="sidebar">
     <div class="brand">P/L <span>SYSTEM</span></div>
     
@@ -17,31 +18,44 @@
       <span class="icon">📊</span> Group 5 (Executive)
     </button>
 
-    <div class="nav-section">BRANCH LOGS</div>
+    <div class="nav-section">GROUP 1</div>
+    <button class="nav-item" onclick="switchTab('awada', this)"><span class="icon">🏢</span> Awada P/L</button>
+    <button class="nav-item" onclick="switchTab('fawaz', this)"><span class="icon">🏢</span> Fawaz P/L</button>
+
+    <div class="nav-section">GROUP 2</div>
+    <button class="nav-item" onclick="switchTab('boudani', this)"><span class="icon">🏢</span> Boudani P/L</button>
+    <button class="nav-item" onclick="switchTab('issa', this)"><span class="icon">🏢</span> Issa P/L</button>
+
+    <div class="nav-section">GROUP 3</div>
     <button class="nav-item" onclick="switchTab('bbc', this)"><span class="icon">🏢</span> BBC P/L</button>
     <button class="nav-item" onclick="switchTab('badaro', this)"><span class="icon">🏢</span> Badaro P/L</button>
     <button class="nav-item" onclick="switchTab('tajco', this)"><span class="icon">🏢</span> Tajco P/L</button>
+
+    <div class="nav-section">GROUP 4</div>
     <button class="nav-item" onclick="switchTab('cdi', this)"><span class="icon">🏢</span> CDI P/L</button>
     <button class="nav-item" onclick="switchTab('connect', this)"><span class="icon">🏢</span> Connect P/L</button>
   </aside>
 
   <main class="content-area">
 
+    <!-- Group 5 Executive Dashboard -->
     <section id="view-group5" class="view-panel active">
       <div class="header">
         <h1>Group 5: Management Executive Summaries</h1>
-        <p>Dedicated Top 5 Weekly Performers split by individual branch.</p>
+        <p>Dedicated Top 5 Winners & Losers split across all 9 operational branches.</p>
       </div>
 
       <div class="management-grid" id="management-tables-container">
-        </div>
+        <!-- Dynamic Branch Top 5 Tables Render Here -->
+      </div>
     </section>
 
+    <!-- Branch Weekly Matrix View -->
     <section id="view-matrix" class="view-panel">
       <div class="header-flex">
         <div>
-          <h1 id="matrix-title">BBC Weekly Operational Matrix</h1>
-          <p>Pre-structured weekly schedule. Enter values directly into the matrix cells.</p>
+          <h1 id="matrix-title">Weekly Operational Matrix</h1>
+          <p>Enter shift results directly into the pre-structured weekly grid.</p>
         </div>
         <button class="save-btn" onclick="saveMatrixData()">Save All Changes</button>
       </div>
@@ -60,7 +74,8 @@
             </tr>
           </thead>
           <tbody id="matrix-tbody">
-            </tbody>
+            <!-- Automatically Generated Weekly Rows (Monday-Friday / ON-AM-PM) -->
+          </tbody>
         </table>
       </div>
     </section>
