@@ -22,7 +22,6 @@ let matrixStore = JSON.parse(localStorage.getItem('pl_matrix_store')) || {};
 function applySidebarLock(allowedTabs) {
   const isGroup5 = allowedTabs.includes('group5');
 
-  // 1. Filter and toggle sidebar navigation buttons
   document.querySelectorAll('.nav-item').forEach(btn => {
     const onclickAttr = btn.getAttribute('onclick') || '';
     const isAllowed = allowedTabs.some(tab => onclickAttr.includes(`'${tab}'`));
@@ -34,7 +33,6 @@ function applySidebarLock(allowedTabs) {
     }
   });
 
-  // 2. Filter section headers (GROUP 1, GROUP 2, etc.) dynamically
   document.querySelectorAll('.nav-section').forEach(sec => {
     if (isGroup5) {
       sec.style.setProperty('display', 'block', 'important');
@@ -64,18 +62,15 @@ function switchTab(tabKey) {
   const activeParam = (urlParams.get('branch') || 'group5').toLowerCase();
   const allowedTabs = branchGroups[activeParam] || [activeParam];
 
-  // Prevent unauthorized branch tab switching
   if (!allowedTabs.includes(tabKey) && activeParam !== 'group5') {
     tabKey = activeParam;
   }
 
-  // Hide view panels
   document.querySelectorAll('.view-panel').forEach(panel => {
     panel.classList.remove('active');
     panel.style.display = 'none';
   });
 
-  // Update button active state
   document.querySelectorAll('.nav-item').forEach(btn => {
     btn.classList.remove('active');
     const onclickAttr = btn.getAttribute('onclick') || '';
@@ -84,7 +79,6 @@ function switchTab(tabKey) {
     }
   });
 
-  // Render requested view
   if (tabKey === 'group5') {
     const group5Panel = document.getElementById('view-group5');
     if (group5Panel) {
@@ -111,21 +105,19 @@ function switchTab(tabKey) {
   window.scrollTo(0, 0);
 }
 
-// Utility: Convert formatted string back to raw number
+// Formatting utilities
 function parseCurrencyNumber(val) {
   if (!val && val !== 0) return 0;
   const clean = val.toString().replace(/[^0-9.-]+/g, "");
   return parseFloat(clean) || 0;
 }
 
-// Utility: Format number into currency ($1,234)
 function formatCurrency(val) {
   const num = parseCurrencyNumber(val);
   if (!num && num !== 0) return '';
   return (num < 0 ? '-' : '') + '$' + Math.abs(num).toLocaleString('en-US');
 }
 
-// Utility: Calculate Coverage Percentage
 function calculatePercentage(client, coverage) {
   const c = parseCurrencyNumber(client);
   const cov = parseCurrencyNumber(coverage);
@@ -168,17 +160,25 @@ function renderRow(tbody, day, shift, type, rank, rowId, rowData) {
       <td>${shift}</td>
       <td><span class="${tagClass}">${type}</span></td>
       <td>#${rank}</td>
-      <td><input class="matrix-input" value="${row.login || ''}" onchange="updateCell('${rowId}', 'login', this.value)"></td>
       <td>
-        <input class="matrix-input" value="${formattedClient}" 
+        <input class="matrix-input col-login" value="${row.login || ''}" 
+               oninput="updateAndAutoSave('${rowId}', 'login', this.value)"
+               onkeydown="handleEnterKey(event, this)">
+      </td>
+      <td>
+        <input class="matrix-input col-client" value="${formattedClient}" 
                onfocus="handleInputFocus(this)" 
                onblur="handleInputBlur('${rowId}', 'client', this)" 
+               oninput="updateAndAutoSave('${rowId}', 'client', this.value)"
+               onkeydown="handleEnterKey(event, this)"
                placeholder="$0">
       </td>
       <td>
-        <input class="matrix-input" value="${formattedCoverage}" 
+        <input class="matrix-input col-coverage" value="${formattedCoverage}" 
                onfocus="handleInputFocus(this)" 
                onblur="handleInputBlur('${rowId}', 'coverage', this)" 
+               oninput="updateAndAutoSave('${rowId}', 'coverage', this.value)"
+               onkeydown="handleEnterKey(event, this)"
                placeholder="$0">
       </td>
       <td><span class="pct-badge" id="pct_${rowId}">${pctDisplay}</span></td>
@@ -193,7 +193,7 @@ function handleInputFocus(input) {
 
 function handleInputBlur(rowId, field, input) {
   const rawNum = parseCurrencyNumber(input.value);
-  updateCell(rowId, field, rawNum);
+  updateAndAutoSave(rowId, field, rawNum);
   
   input.value = rawNum ? formatCurrency(rawNum) : '';
 
@@ -204,16 +204,34 @@ function handleInputBlur(rowId, field, input) {
   }
 }
 
-function updateCell(rowId, field, val) {
+// Auto-Saves instantly on every input entry
+function updateAndAutoSave(rowId, field, val) {
   if (!matrixStore[currentBranch]) matrixStore[currentBranch] = {};
   if (!matrixStore[currentBranch][rowId]) matrixStore[currentBranch][rowId] = { login: '', client: '', coverage: '' };
   
   matrixStore[currentBranch][rowId][field] = val;
+  localStorage.setItem('pl_matrix_store', JSON.stringify(matrixStore));
 }
 
-function saveMatrixData() {
-  localStorage.setItem('pl_matrix_store', JSON.stringify(matrixStore));
-  alert('Operational Matrix saved successfully!');
+// Pressing ENTER automatically jumps directly down to the next input field
+function handleEnterKey(event, currentInput) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    
+    // Trigger blur/format logic if active
+    currentInput.blur();
+
+    const allInputs = Array.from(document.querySelectorAll('.matrix-input'));
+    const currentIndex = allInputs.indexOf(currentInput);
+
+    if (currentIndex !== -1 && currentIndex + 1 < allInputs.length) {
+      const nextInput = allInputs[currentIndex + 1];
+      nextInput.focus();
+      if (typeof nextInput.select === 'function') {
+        nextInput.select();
+      }
+    }
+  }
 }
 
 function renderManagementView() {
@@ -271,14 +289,10 @@ function initApp() {
   const branchParam = (urlParams.get('branch') || 'group5').toLowerCase();
   const allowedTabs = branchGroups[branchParam] || [branchParam];
 
-  // Apply dynamic lock down across all groups
   applySidebarLock(allowedTabs);
-
-  // Switch to requested branch tab
   switchTab(branchParam);
 }
 
-// Run routing immediately on load
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp);
 } else {
