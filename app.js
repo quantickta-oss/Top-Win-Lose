@@ -232,7 +232,7 @@ function handleInputFocus(input) {
 function handleInputBlur(rowId, field, input) {
   input.style.textAlign = 'right';
   const rawNum = parseCurrencyNumber(input.value);
-  updateLocalAndScheduleSave(rowId, field, rawNum, true);
+  updateLocalAndScheduleSave(rowId, field, rawNum, false); // Standard debounced save on blur
   
   input.value = rawNum ? formatCurrency(rawNum) : '';
 
@@ -275,24 +275,24 @@ function updateLocalAndScheduleSave(rowId, field, val, immediate = false) {
   }
 }
 
-// Sequential cell navigation on Enter
+// Clean DOM traversal across all inputs on Enter key
 function handleEnterKey(event, currentInput) {
   if (event.key === 'Enter') {
     event.preventDefault();
 
-    const allInputs = Array.from(document.querySelectorAll('.matrix-input'));
-    const currentIndex = allInputs.indexOf(currentInput);
+    const inputs = Array.from(document.querySelectorAll('input.matrix-input'));
+    const index = inputs.indexOf(currentInput);
 
-    if (currentIndex !== -1 && currentIndex + 1 < allInputs.length) {
-      const nextInput = allInputs[currentIndex + 1];
+    if (index !== -1 && index + 1 < inputs.length) {
+      const nextInput = inputs[index + 1];
       
-      // Request next frame to bypass blur-event race condition on formatted inputs
-      requestAnimationFrame(() => {
+      // Delay slightly so blur handlers finish execution cleanly
+      setTimeout(() => {
         nextInput.focus();
         if (typeof nextInput.select === 'function') {
           nextInput.select();
         }
-      });
+      }, 20);
     }
   }
 }
