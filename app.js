@@ -275,7 +275,7 @@ function updateLocalAndScheduleSave(rowId, field, val, immediate = false) {
   }
 }
 
-// Direct focus navigation without explicit blur calls
+// Sequential cell navigation on Enter
 function handleEnterKey(event, currentInput) {
   if (event.key === 'Enter') {
     event.preventDefault();
@@ -285,10 +285,14 @@ function handleEnterKey(event, currentInput) {
 
     if (currentIndex !== -1 && currentIndex + 1 < allInputs.length) {
       const nextInput = allInputs[currentIndex + 1];
-      nextInput.focus();
-      if (typeof nextInput.select === 'function') {
-        nextInput.select();
-      }
+      
+      // Request next frame to bypass blur-event race condition on formatted inputs
+      requestAnimationFrame(() => {
+        nextInput.focus();
+        if (typeof nextInput.select === 'function') {
+          nextInput.select();
+        }
+      });
     }
   }
 }
