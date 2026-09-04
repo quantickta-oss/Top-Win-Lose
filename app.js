@@ -197,10 +197,11 @@ function renderRow(tbody, day, shift, type, rank, rowId, rowData) {
     <td>
       <input id="input_login_${rowId}" class="matrix-input" value="${row.login || ''}" 
              oninput="updateLocalAndScheduleSave('${rowId}', 'login', this.value)"
-             onkeydown="handleEnterKey(event, this)">
+             onkeydown="handleEnterKey(event, this)"
+             placeholder="Login ID">
     </td>
     <td>
-      <input id="input_client_${rowId}" class="matrix-input" value="${formattedClient}" 
+      <input id="input_client_${rowId}" class="matrix-input num-input" value="${formattedClient}" 
              onfocus="handleInputFocus(this)" 
              onblur="handleInputBlur('${rowId}', 'client', this)" 
              oninput="updateLocalAndScheduleSave('${rowId}', 'client', this.value)"
@@ -208,7 +209,7 @@ function renderRow(tbody, day, shift, type, rank, rowId, rowData) {
              placeholder="$0">
     </td>
     <td>
-      <input id="input_coverage_${rowId}" class="matrix-input" value="${formattedCoverage}" 
+      <input id="input_coverage_${rowId}" class="matrix-input num-input" value="${formattedCoverage}" 
              onfocus="handleInputFocus(this)" 
              onblur="handleInputBlur('${rowId}', 'coverage', this)" 
              oninput="updateLocalAndScheduleSave('${rowId}', 'coverage', this.value)"
@@ -227,7 +228,7 @@ function handleInputFocus(input) {
 
 function handleInputBlur(rowId, field, input) {
   const rawNum = parseCurrencyNumber(input.value);
-  updateLocalAndScheduleSave(rowId, field, rawNum, true); // Immediate sync on blur
+  updateLocalAndScheduleSave(rowId, field, rawNum, true); // Immediate save on blur
   
   input.value = rawNum ? formatCurrency(rawNum) : '';
 
@@ -271,7 +272,7 @@ function updateLocalAndScheduleSave(rowId, field, val, immediate = false) {
   }
 }
 
-// Enter Key navigation (moves cursor cleanly to next row)
+// Enter Key navigation (moves cursor cleanly to next row input)
 function handleEnterKey(event, currentInput) {
   if (event.key === 'Enter') {
     event.preventDefault();
