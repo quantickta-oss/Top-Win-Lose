@@ -5,14 +5,12 @@
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
-
 body {
   display: flex;
   background-color: #0b0f17;
   color: #e2e8f0;
   min-height: 100vh;
 }
-
 /* Sidebar Styling */
 .sidebar {
   width: 240px;
@@ -24,7 +22,6 @@ body {
   gap: 8px;
   flex-shrink: 0;
 }
-
 .brand {
   font-size: 1.25rem;
   font-weight: 800;
@@ -32,11 +29,9 @@ body {
   margin-bottom: 20px;
   padding-left: 10px;
 }
-
 .brand span {
   color: #3b82f6;
 }
-
 .nav-section {
   font-size: 0.7rem;
   font-weight: 700;
@@ -47,7 +42,6 @@ body {
   margin-bottom: 5px;
   padding-left: 10px;
 }
-
 .nav-item {
   display: flex;
   align-items: center;
@@ -64,40 +58,54 @@ body {
   width: 100%;
   transition: all 0.15s ease;
 }
-
 .nav-item:hover {
   background-color: #1f2937;
   color: #ffffff;
 }
-
 .nav-item.active {
   background-color: #2563eb;
   color: #ffffff;
 }
-
 /* Main Area */
 .main-content {
   flex: 1;
   padding: 30px;
   overflow-y: auto;
 }
-
 .header-container {
   margin-bottom: 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
-
 .header-container h1 {
   font-size: 1.5rem;
   font-weight: 700;
   color: #f8fafc;
 }
-
 .subtitle {
   font-size: 0.875rem;
   color: #64748b;
   margin-top: 4px;
 }
-
+/* Danger / destructive action button (Archive & Reset Week) */
+.danger-btn {
+  background-color: #7f1d1d;
+  color: #fecaca;
+  border: 1px solid #991b1b;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  white-space: nowrap;
+}
+.danger-btn:hover {
+  background-color: #991b1b;
+}
 /* Table Card */
 .table-card {
   background-color: #111827;
@@ -105,14 +113,12 @@ body {
   border-radius: 8px;
   overflow: hidden;
 }
-
 .matrix-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
   font-size: 0.875rem;
 }
-
 .matrix-table th {
   background-color: #1f2937;
   color: #9ca3af;
@@ -122,13 +128,11 @@ body {
   font-size: 0.75rem;
   text-transform: uppercase;
 }
-
 .matrix-table td {
   padding: 8px 12px;
   border-bottom: 1px solid #1f2937;
   color: #d1d5db;
 }
-
 /* FIX: Input field alignment for Trader Login vs Numeric Values */
 .matrix-input {
   width: 100%;
@@ -143,50 +147,109 @@ body {
   outline: none;
   transition: border-color 0.15s ease;
 }
-
 /* Keep Client ($) and Coverage ($) right-aligned for numbers */
 .matrix-input.num-input {
   text-align: right !important;
 }
-
 .matrix-input:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
-
 /* Badges & Tags */
 .tag-winner {
   color: #10b981;
   font-weight: 600;
 }
-
 .tag-loser {
   color: #ef4444;
   font-weight: 600;
 }
-
 .pct-badge {
   color: #3b82f6;
   font-weight: 600;
 }
-
 /* Dashboard Grid for Group 5 */
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 20px;
 }
-
 .branch-card {
   background-color: #111827;
   border: 1px solid #1f2937;
   border-radius: 8px;
   padding: 16px;
 }
-
 .branch-card h3 {
   font-size: 1rem;
   font-weight: 700;
   color: #f3f4f6;
   margin-bottom: 12px;
+}
+
+/* Weekly Archive screen */
+.archive-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+.archive-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background-color: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  padding: 10px;
+}
+.archive-week-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.archive-week-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #9ca3af;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-align: left;
+  width: 100%;
+  transition: all 0.15s ease;
+}
+.archive-week-btn:hover {
+  background-color: #1f2937;
+  color: #ffffff;
+}
+.archive-week-btn.active {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+.archive-content {
+  flex: 1;
+  min-width: 0;
+}
+.archive-detail-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 15px;
+}
+
+/* Responsive: stack archive sidebar above content on narrow screens */
+@media (max-width: 900px) {
+  .archive-layout {
+    flex-direction: column;
+  }
+  .archive-sidebar {
+    width: 100%;
+  }
+  .archive-week-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .archive-week-btn {
+    width: auto;
+  }
 }
