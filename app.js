@@ -25,7 +25,7 @@ const branchGroups = {
   'tajco': ['bbc', 'badaro', 'tajco'],
   'cdi': ['cdi', 'connect'],
   'connect': ['cdi', 'connect'],
-  'group5': ['awada', 'fawaz', 'boudani', 'issa', 'bbc', 'badaro', 'tajco', 'cdi', 'connect', 'group5']
+  'group5': ['awada', 'fawaz', 'boudani', 'issa', 'bbc', 'badaro', 'tajco', 'cdi', 'connect', 'group5', 'archive']
 };
 
 const allBranches = ["awada", "fawaz", "boudani", "issa", "bbc", "badaro", "tajco", "cdi", "connect"];
@@ -36,20 +36,36 @@ let currentBranch = 'awada';
 let matrixStore = {};
 let saveDebounceTimers = {};
 
+let archiveStore = {};
+let selectedArchiveWeek = null;
+
 // Live Listener: Updates data without disrupting active user focus
 db.ref('pl_matrix_store').on('value', (snapshot) => {
   matrixStore = snapshot.val() || {};
-  
+
   const urlParams = new URLSearchParams(window.location.search);
   const activeParam = (urlParams.get('branch') || 'group5').toLowerCase();
-  
+
   if (activeParam === 'group5') {
-    renderManagementView();
+    const group5Panel = document.getElementById('view-group5');
+    if (group5Panel && group5Panel.classList.contains('active')) {
+      renderManagementView();
+    }
   } else {
     // Prevent DOM redraw while editing any input
     if (!document.activeElement || document.activeElement.tagName !== 'INPUT') {
       renderMatrixTable();
     }
+  }
+});
+
+// Live Listener: Weekly archive history (Group 5 / executive access only in the UI)
+db.ref('pl_history').on('value', (snapshot) => {
+  archiveStore = snapshot.val() || {};
+
+  const archivePanel = document.getElementById('view-archive');
+  if (archivePanel && archivePanel.classList.contains('active')) {
+    renderArchiveView();
   }
 });
 
@@ -91,6 +107,14 @@ function applySidebarLock(allowedTabs) {
   });
 }
 
+function showPanel(panelId) {
+  const panel = document.getElementById(panelId);
+  if (panel) {
+    panel.classList.add('active');
+    panel.style.display = 'block';
+  }
+}
+
 function switchTab(tabKey) {
   const urlParams = new URLSearchParams(window.location.search);
   const activeParam = (urlParams.get('branch') || 'group5').toLowerCase();
@@ -114,25 +138,20 @@ function switchTab(tabKey) {
   });
 
   if (tabKey === 'group5') {
-    const group5Panel = document.getElementById('view-group5');
-    if (group5Panel) {
-      group5Panel.classList.add('active');
-      group5Panel.style.display = 'block';
-    }
+    showPanel('view-group5');
     renderManagementView();
+  } else if (tabKey === 'archive') {
+    showPanel('view-archive');
+    renderArchiveView();
   } else {
     currentBranch = tabKey;
-    const matrixPanel = document.getElementById('view-matrix');
-    if (matrixPanel) {
-      matrixPanel.classList.add('active');
-      matrixPanel.style.display = 'block';
-    }
-    
+    showPanel('view-matrix');
+
     const titleElem = document.getElementById('matrix-title');
     if (titleElem) {
       titleElem.innerText = tabKey.toUpperCase() + " Weekly Operational Matrix";
     }
-    
+
     renderMatrixTable();
   }
 
@@ -233,7 +252,7 @@ function handleInputBlur(rowId, field, input) {
   input.style.textAlign = 'right';
   const rawNum = parseCurrencyNumber(input.value);
   updateLocalAndScheduleSave(rowId, field, rawNum, false);
-  
+
   input.value = rawNum ? formatCurrency(rawNum) : '';
 
   const rowData = (matrixStore[currentBranch] || {})[rowId] || {};
@@ -247,7 +266,7 @@ function handleInputBlur(rowId, field, input) {
 function updateLocalAndScheduleSave(rowId, field, val, immediate = false) {
   if (!matrixStore[currentBranch]) matrixStore[currentBranch] = {};
   if (!matrixStore[currentBranch][rowId]) matrixStore[currentBranch][rowId] = { login: '', client: '', coverage: '' };
-  
+
   matrixStore[currentBranch][rowId][field] = val;
 
   // Live calculation for Coverage % badge while typing
@@ -285,7 +304,7 @@ function handleEnterKey(event, currentInput) {
 
     if (index !== -1 && index + 1 < inputs.length) {
       const nextInput = inputs[index + 1];
-      
+
       setTimeout(() => {
         nextInput.focus();
         if (typeof nextInput.select === 'function') {
@@ -296,33 +315,46 @@ function handleEnterKey(event, currentInput) {
   }
 }
 
+// Builds the Top 5 Winners / Top 5 Losers lists for a single branch's data,
+// counting ONLY entries logged under the PM shift.
+function computeTopFivePM(branchData) {
+  const bData = branchData || {};
+  let allEntries = [];
+
+  Object.keys(bData).forEach(key => {
+    if (!key.includes('_PM_')) return; // PM shift rows only, e.g. "Monday_PM_Winner_1"
+
+    const item = bData[key];
+    if (item.login && item.client !== undefined && item.client !== '') {
+      allEntries.push({
+        type: key.includes('_Loser_') ? 'Loser' : 'Winner',
+        login: item.login,
+        client: parseCurrencyNumber(item.client),
+        coverage: parseCurrencyNumber(item.coverage)
+      });
+    }
+  });
+
+  const winners = allEntries
+    .filter(r => r.type === 'Winner' || r.client > 0)
+    .sort((a, b) => Math.abs(b.client) - Math.abs(a.client))
+    .slice(0, 5);
+
+  const losers = allEntries
+    .filter(r => r.type === 'Loser' || r.client < 0)
+    .sort((a, b) => Math.abs(b.client) - Math.abs(a.client))
+    .slice(0, 5);
+
+  return { winners, losers };
+}
+
 function renderManagementView() {
   const container = document.getElementById('management-tables-container');
   if (!container) return;
   container.innerHTML = '';
 
   allBranches.forEach(b => {
-    const bData = matrixStore[b] || {};
-    let allEntries = [];
-
-    // Parse all populated entries for this branch
-    Object.keys(bData).forEach(key => {
-      const item = bData[key];
-      if (item.login && item.client !== undefined && item.client !== '') {
-        allEntries.push({
-          type: key.includes('_Loser_') ? 'Loser' : 'Winner',
-          login: item.login,
-          client: parseCurrencyNumber(item.client),
-          coverage: parseCurrencyNumber(item.coverage)
-        });
-      }
-    });
-
-    // 1. Top 5 Winners (Sorted by highest positive P/L)
-    const winners = allEntries
-      .filter(r => r.type === 'Winner' || r.client > 0)
-      .sort((a, b) => Math.abs(b.client) - Math.abs(a.client))
-      .slice(0, 5);
+    const { winners, losers } = computeTopFivePM(matrixStore[b]);
 
     let winnersHTML = winners.map((w, i) => `
       <tr>
@@ -333,12 +365,6 @@ function renderManagementView() {
       </tr>
     `).join('') || '<tr><td colspan="4" style="text-align:center;color:#64748b;">No data entered</td></tr>';
 
-    // 2. Top 5 Losers (Sorted by largest loss)
-    const losers = allEntries
-      .filter(r => r.type === 'Loser' || r.client < 0)
-      .sort((a, b) => Math.abs(b.client) - Math.abs(a.client))
-      .slice(0, 5);
-
     let losersHTML = losers.map((l, i) => `
       <tr>
         <td>#${i + 1}</td>
@@ -348,10 +374,9 @@ function renderManagementView() {
       </tr>
     `).join('') || '<tr><td colspan="4" style="text-align:center;color:#64748b;">No data entered</td></tr>';
 
-    // Render cards for both Top 5 Winners and Top 5 Losers per branch
     container.innerHTML += `
       <div class="branch-card">
-        <h3>${b.toUpperCase()} — Top 5 Winners</h3>
+        <h3>${b.toUpperCase()} — Top 5 Winners (PM Shift)</h3>
         <table class="matrix-table">
           <thead>
             <tr>
@@ -366,7 +391,7 @@ function renderManagementView() {
       </div>
 
       <div class="branch-card">
-        <h3>${b.toUpperCase()} — Top 5 Losers</h3>
+        <h3>${b.toUpperCase()} — Top 5 Losers (PM Shift)</h3>
         <table class="matrix-table">
           <thead>
             <tr>
@@ -381,6 +406,136 @@ function renderManagementView() {
       </div>
     `;
   });
+}
+
+// Archives this week's PM-shift Top 5 Winners/Losers per branch to Firebase,
+// then (only if that save succeeds) wipes all branch entries for the new week.
+function archiveAndResetWeek() {
+  const confirmed = confirm(
+    "This will save this week's PM-shift Top 5 Winners/Losers for every branch " +
+    "to the archive, then permanently erase everything branches entered this week.\n\n" +
+    "This cannot be undone. Continue?"
+  );
+  if (!confirmed) return;
+
+  const archiveKey = Date.now().toString();
+  const archiveData = {};
+
+  allBranches.forEach(b => {
+    archiveData[b] = computeTopFivePM(matrixStore[b]);
+  });
+
+  db.ref(`pl_history/${archiveKey}`).set({
+    archivedAt: new Date().toISOString(),
+    branches: archiveData
+  })
+  .then(() => db.ref('pl_matrix_store').remove())
+  .then(() => {
+    alert("This week's Top 5 results were archived, and all branch entries have been reset.");
+  })
+  .catch((err) => {
+    console.error('Archive & reset failed:', err);
+    alert("Something went wrong while archiving. Nothing was erased — please try again.");
+  });
+}
+
+// --- Weekly Archive browsing screen ---
+
+function formatArchiveDate(isoOrTimestamp) {
+  const d = new Date(isoOrTimestamp);
+  const datePart = d.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+  const timePart = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  return `${datePart} · ${timePart}`;
+}
+
+function renderArchiveView() {
+  const listContainer = document.getElementById('archive-week-list');
+  const detailContainer = document.getElementById('archive-detail-container');
+  if (!listContainer || !detailContainer) return;
+
+  const weekKeys = Object.keys(archiveStore).sort((a, b) => Number(b) - Number(a));
+
+  if (weekKeys.length === 0) {
+    listContainer.innerHTML = '<p class="subtitle" style="padding:10px;">No archived weeks yet.</p>';
+    detailContainer.innerHTML = '';
+    selectedArchiveWeek = null;
+    return;
+  }
+
+  if (!selectedArchiveWeek || !archiveStore[selectedArchiveWeek]) {
+    selectedArchiveWeek = weekKeys[0];
+  }
+
+  listContainer.innerHTML = weekKeys.map(key => {
+    const entry = archiveStore[key];
+    const label = formatArchiveDate(entry.archivedAt || Number(key));
+    const activeClass = key === selectedArchiveWeek ? 'active' : '';
+    return `<button class="archive-week-btn ${activeClass}" onclick="selectArchiveWeek('${key}')">${label}</button>`;
+  }).join('');
+
+  renderArchiveDetail(selectedArchiveWeek);
+}
+
+function selectArchiveWeek(weekKey) {
+  selectedArchiveWeek = weekKey;
+  renderArchiveView();
+}
+
+function renderArchiveDetail(weekKey) {
+  const detailContainer = document.getElementById('archive-detail-container');
+  if (!detailContainer) return;
+
+  const entry = archiveStore[weekKey];
+  if (!entry) {
+    detailContainer.innerHTML = '';
+    return;
+  }
+
+  const branches = entry.branches || {};
+  let html = `<h2 class="archive-detail-title">Week archived: ${formatArchiveDate(entry.archivedAt || Number(weekKey))}</h2>
+    <div class="dashboard-grid">`;
+
+  allBranches.forEach(b => {
+    const bArchive = branches[b] || { winners: [], losers: [] };
+
+    const winnersHTML = (bArchive.winners || []).map((w, i) => `
+      <tr>
+        <td>#${i + 1}</td>
+        <td><strong>${w.login}</strong></td>
+        <td class="tag-winner">${formatCurrency(w.client)}</td>
+        <td>${formatCurrency(w.coverage)}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="4" style="text-align:center;color:#64748b;">No data</td></tr>';
+
+    const losersHTML = (bArchive.losers || []).map((l, i) => `
+      <tr>
+        <td>#${i + 1}</td>
+        <td><strong>${l.login}</strong></td>
+        <td class="tag-loser">${formatCurrency(l.client)}</td>
+        <td>${formatCurrency(l.coverage)}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="4" style="text-align:center;color:#64748b;">No data</td></tr>';
+
+    html += `
+      <div class="branch-card">
+        <h3>${b.toUpperCase()} — Top 5 Winners</h3>
+        <table class="matrix-table">
+          <thead><tr><th>RANK</th><th>LOGIN</th><th>CLIENT P/L</th><th>COVERAGE P/L</th></tr></thead>
+          <tbody>${winnersHTML}</tbody>
+        </table>
+      </div>
+      <div class="branch-card">
+        <h3>${b.toUpperCase()} — Top 5 Losers</h3>
+        <table class="matrix-table">
+          <thead><tr><th>RANK</th><th>LOGIN</th><th>CLIENT P/L</th><th>COVERAGE P/L</th></tr></thead>
+          <tbody>${losersHTML}</tbody>
+        </table>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+  detailContainer.innerHTML = html;
 }
 
 function initApp() {
