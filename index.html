@@ -7,35 +7,32 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
   <aside class="sidebar">
     <div class="brand">P/L <span>SYSTEM</span></div>
-    
+
     <div class="nav-section management-section">MANAGEMENT</div>
     <button class="nav-item" onclick="switchTab('group5')">
       <span class="icon">📊</span> Group 5 (Executive)
     </button>
-
+    <button class="nav-item" onclick="switchTab('archive')">
+      <span class="icon">📁</span> Weekly Archive
+    </button>
     <div class="nav-section">GROUP 1</div>
     <button class="nav-item" onclick="switchTab('awada')"><span class="icon">🏢</span> Awada P/L</button>
     <button class="nav-item" onclick="switchTab('fawaz')"><span class="icon">🏢</span> Fawaz P/L</button>
-
     <div class="nav-section">GROUP 2</div>
     <button class="nav-item" onclick="switchTab('boudani')"><span class="icon">🏢</span> Boudani P/L</button>
     <button class="nav-item" onclick="switchTab('issa')"><span class="icon">🏢</span> Issa P/L</button>
-
     <div class="nav-section">GROUP 3</div>
     <button class="nav-item" onclick="switchTab('bbc')"><span class="icon">🏢</span> BBC P/L</button>
     <button class="nav-item" onclick="switchTab('badaro')"><span class="icon">🏢</span> Badaro P/L</button>
     <button class="nav-item" onclick="switchTab('tajco')"><span class="icon">🏢</span> Tajco P/L</button>
-
     <div class="nav-section">GROUP 4</div>
     <button class="nav-item" onclick="switchTab('cdi')"><span class="icon">🏢</span> CDI P/L</button>
     <button class="nav-item" onclick="switchTab('connect')"><span class="icon">🏢</span> Connect P/L</button>
   </aside>
-
   <main class="main-content">
-    
+
     <div id="view-matrix" class="view-panel active">
       <div class="header-container">
         <div>
@@ -43,7 +40,6 @@
           <p class="subtitle">Enter shift results directly into the weekly grid. All entries auto-save in real time.</p>
         </div>
       </div>
-
       <div class="table-card">
         <table class="matrix-table">
           <thead>
@@ -68,18 +64,34 @@
       <div class="header-container">
         <div>
           <h1>Group 5 — Executive Dashboard</h1>
-          <p class="subtitle">Real-time Top 5 Winners & Top 5 Losers across all operational branches.</p>
+          <p class="subtitle">Real-time Top 5 Winners & Top 5 Losers (PM shift) across all operational branches.</p>
         </div>
+        <button class="danger-btn" onclick="archiveAndResetWeek()">🗓️ Archive &amp; Reset Week</button>
       </div>
       <div id="management-tables-container" class="dashboard-grid">
         </div>
     </div>
 
-  </main>
+    <div id="view-archive" class="view-panel" style="display: none;">
+      <div class="header-container">
+        <div>
+          <h1>Weekly Archive</h1>
+          <p class="subtitle">Browse Top 5 Winners &amp; Losers (PM shift) saved from past weeks.</p>
+        </div>
+      </div>
+      <div class="archive-layout">
+        <div class="archive-sidebar">
+          <div id="archive-week-list" class="archive-week-list"></div>
+        </div>
+        <div class="archive-content">
+          <div id="archive-detail-container"></div>
+        </div>
+      </div>
+    </div>
 
+  </main>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
   <script src="app.js"></script>
 </body>
 </html>
