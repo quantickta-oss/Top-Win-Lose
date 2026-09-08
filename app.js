@@ -317,32 +317,40 @@ function handleEnterKey(event, currentInput) {
 
 // Builds the Top 5 Winners / Top 5 Losers lists for a single branch's data,
 // counting ONLY entries logged under the PM shift.
+//
+// FIX: a login's client P/L and coverage P/L are first NETTED across every
+// PM row it appears in for the week (whether typed into a Winner slot or a
+// Loser slot). Only after netting do we classify it as a winner (net > 0)
+// or loser (net < 0) and rank on that net amount. This guarantees a single
+// login can never appear on both the Winners and Losers tables.
 function computeTopFivePM(branchData) {
   const bData = branchData || {};
-  let allEntries = [];
+  const netByLogin = {};
 
   Object.keys(bData).forEach(key => {
     if (!key.includes('_PM_')) return; // PM shift rows only, e.g. "Monday_PM_Winner_1"
 
     const item = bData[key];
-    if (item.login && item.client !== undefined && item.client !== '') {
-      allEntries.push({
-        type: key.includes('_Loser_') ? 'Loser' : 'Winner',
-        login: item.login,
-        client: parseCurrencyNumber(item.client),
-        coverage: parseCurrencyNumber(item.coverage)
-      });
+    if (!item.login || item.client === undefined || item.client === '') return;
+
+    const login = item.login;
+    if (!netByLogin[login]) {
+      netByLogin[login] = { login, client: 0, coverage: 0 };
     }
+    netByLogin[login].client += parseCurrencyNumber(item.client);
+    netByLogin[login].coverage += parseCurrencyNumber(item.coverage);
   });
 
-  const winners = allEntries
-    .filter(r => r.type === 'Winner' || r.client > 0)
-    .sort((a, b) => Math.abs(b.client) - Math.abs(a.client))
+  const netEntries = Object.values(netByLogin);
+
+  const winners = netEntries
+    .filter(r => r.client > 0)
+    .sort((a, b) => b.client - a.client)
     .slice(0, 5);
 
-  const losers = allEntries
-    .filter(r => r.type === 'Loser' || r.client < 0)
-    .sort((a, b) => Math.abs(b.client) - Math.abs(a.client))
+  const losers = netEntries
+    .filter(r => r.client < 0)
+    .sort((a, b) => a.client - b.client)
     .slice(0, 5);
 
   return { winners, losers };
