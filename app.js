@@ -1,6 +1,10 @@
-// Firebase Configuration
+// ============================================================================
+// Dealer P/L & Operational Risk Dashboard (Client-Side Analytics Desk)
+// ============================================================================
+
+// Firebase Configuration (Inject environment variables or production credentials)
 const firebaseConfig = {
-  apiKey: "AIzaSyA7aW_ZjQ70syN6SigrdPO_v0BB4E8HJv0",
+  apiKey: "YOUR_FIREBASE_API_KEY",
   authDomain: "pl-system-227d1.firebaseapp.com",
   databaseURL: "https://pl-system-227d1-default-rtdb.firebaseio.com",
   projectId: "pl-system-227d1",
@@ -11,7 +15,9 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase Realtime Database
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 const db = firebase.database();
 
 // Master Branch Access Control Mapping
@@ -315,25 +321,19 @@ function handleEnterKey(event, currentInput) {
   }
 }
 
-// Builds the Top 5 Winners / Top 5 Losers lists for a single branch's data,
-// counting ONLY entries logged under the PM shift.
-//
-// FIX: a login's client P/L and coverage P/L are first NETTED across every
-// PM row it appears in for the week (whether typed into a Winner slot or a
-// Loser slot). Only after netting do we classify it as a winner (net > 0)
-// or loser (net < 0) and rank on that net amount. This guarantees a single
-// login can never appear on both the Winners and Losers tables.
+// Dealer Analytics Engine:
+// Builds Top 5 Winners / Losers lists for a branch by netting logins exclusively from PM shift rows.
 function computeTopFivePM(branchData) {
   const bData = branchData || {};
   const netByLogin = {};
 
   Object.keys(bData).forEach(key => {
-    if (!key.includes('_PM_')) return; // PM shift rows only, e.g. "Monday_PM_Winner_1"
+    if (!key.includes('_PM_')) return; // Target PM shift rows only
 
     const item = bData[key];
     if (!item.login || item.client === undefined || item.client === '') return;
 
-    const login = item.login;
+    const login = String(item.login).trim();
     if (!netByLogin[login]) {
       netByLogin[login] = { login, client: 0, coverage: 0 };
     }
@@ -416,8 +416,7 @@ function renderManagementView() {
   });
 }
 
-// Archives this week's PM-shift Top 5 Winners/Losers per branch to Firebase,
-// then (only if that save succeeds) wipes all branch entries for the new week.
+// Archives PM-shift Top 5 Winners/Losers to Firebase history before resetting matrix store
 function archiveAndResetWeek() {
   const confirmed = confirm(
     "This will save this week's PM-shift Top 5 Winners/Losers for every branch " +
@@ -447,7 +446,7 @@ function archiveAndResetWeek() {
   });
 }
 
-// --- Weekly Archive browsing screen ---
+// --- Weekly Archive Browsing Screen ---
 
 function formatArchiveDate(isoOrTimestamp) {
   const d = new Date(isoOrTimestamp);
