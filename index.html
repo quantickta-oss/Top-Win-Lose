@@ -1,162 +1,729 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>P/L SYSTEM — Dealer Risk Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    P/L SYSTEM — Dealer Risk Dashboard
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="styles.css"
+  >
+
 </head>
+
+
 <body>
+
+
+  <!-- =======================================================
+       SIDEBAR
+       ======================================================= -->
+
   <aside class="sidebar">
+
+
+    <!-- BRAND -->
+
     <div class="brand-block">
-      <div class="brand-mark">PL</div>
-      <div>
-        <div class="brand">P/L <span>SYSTEM</span></div>
-        <div class="brand-subtitle">Dealer Risk Desk</div>
+
+      <div class="brand-mark">
+        PL
       </div>
+
+      <div>
+
+        <div class="brand">
+          P/L <span>SYSTEM</span>
+        </div>
+
+        <div class="brand-subtitle">
+          Dealer Risk Desk
+        </div>
+
+      </div>
+
     </div>
 
-    <div class="nav-section management-section">MANAGEMENT</div>
-    <button class="nav-item" onclick="switchTab('group5')"><span class="icon">▦</span> Executive Dashboard</button>
-    <button class="nav-item" onclick="switchTab('archive')"><span class="icon">◫</span> Weekly Archive</button>
 
-    <div class="nav-section">GROUP 1</div>
-    <button class="nav-item" onclick="switchTab('awada')"><span class="icon">●</span> Awada P/L</button>
-    <button class="nav-item" onclick="switchTab('fawaz')"><span class="icon">●</span> Fawaz P/L</button>
+    <!-- MANAGEMENT -->
 
-    <div class="nav-section">GROUP 2</div>
-    <button class="nav-item" onclick="switchTab('boudani')"><span class="icon">●</span> Boudani P/L</button>
-    <button class="nav-item" onclick="switchTab('issa')"><span class="icon">●</span> Issa P/L</button>
+    <div class="nav-section management-section">
+      MANAGEMENT
+    </div>
 
-    <div class="nav-section">GROUP 3</div>
-    <button class="nav-item" onclick="switchTab('bbc')"><span class="icon">●</span> BBC P/L</button>
-    <button class="nav-item" onclick="switchTab('badaro')"><span class="icon">●</span> Badaro P/L</button>
-    <button class="nav-item" onclick="switchTab('tajco')"><span class="icon">●</span> Tajco P/L</button>
 
-    <div class="nav-section">GROUP 4</div>
-    <button class="nav-item" onclick="switchTab('cdi')"><span class="icon">●</span> CDI P/L</button>
-    <button class="nav-item" onclick="switchTab('connect')"><span class="icon">●</span> Connect P/L</button>
+    <button
+      class="nav-item"
+      onclick="switchTab('group5')"
+    >
+
+      <span class="icon">
+        ▦
+      </span>
+
+      Executive Dashboard
+
+    </button>
+
+
+    <button
+      class="nav-item"
+      onclick="switchTab('archive')"
+    >
+
+      <span class="icon">
+        ◫
+      </span>
+
+      Weekly Archive
+
+    </button>
+
+
+
+    <!-- GROUP 1 -->
+
+    <div class="nav-section">
+      GROUP 1
+    </div>
+
+
+    <button
+      class="nav-item"
+      onclick="switchTab('awada')"
+    >
+
+      <span class="icon">
+        ●
+      </span>
+
+      Awada P/L
+
+    </button>
+
+
+    <button
+      class="nav-item"
+      onclick="switchTab('fawaz')"
+    >
+
+      <span class="icon">
+        ●
+      </span>
+
+      Fawaz P/L
+
+    </button>
+
+
+
+    <!-- GROUP 2 -->
+
+    <div class="nav-section">
+      GROUP 2
+    </div>
+
+
+    <button
+      class="nav-item"
+      onclick="switchTab('boudani')"
+    >
+
+      <span class="icon">
+        ●
+      </span>
+
+      Boudani P/L
+
+    </button>
+
+
+    <button
+      class="nav-item"
+      onclick="switchTab('issa')"
+    >
+
+      <span class="icon">
+        ●
+      </span>
+
+      Issa P/L
+
+    </button>
+
+
+
+    <!-- GROUP 3 -->
+
+    <div class="nav-section">
+      GROUP 3
+    </div>
+
+
+    <button
+      class="nav-item"
+      onclick="switchTab('bbc')"
+    >
+
+      <span class="icon">
+        ●
+      </span>
+
+      BBC P/L
+
+    </button>
+
+
+    <button
+      class="nav-item"
+      onclick="switchTab('badaro')"
+    >
+
+      <span class="icon">
+        ●
+      </span>
+
+      Badaro P/L
+
+    </button>
+
+
+    <button
+      class="nav-item"
+      onclick="switchTab('tajco')"
+    >
+
+      <span class="icon">
+        ●
+      </span>
+
+      Tajco P/L
+
+    </button>
+
+
+
+    <!-- GROUP 4 -->
+
+    <div class="nav-section">
+      GROUP 4
+    </div>
+
+
+    <button
+      class="nav-item"
+      onclick="switchTab('cdi')"
+    >
+
+      <span class="icon">
+        ●
+      </span>
+
+      CDI P/L
+
+    </button>
+
+
+    <button
+      class="nav-item"
+      onclick="switchTab('connect')"
+    >
+
+      <span class="icon">
+        ●
+      </span>
+
+      Connect P/L
+
+    </button>
+
+
   </aside>
 
+
+
+  <!-- =======================================================
+       MAIN CONTENT
+       ======================================================= -->
+
   <main class="main-content">
-    <div id="view-matrix" class="view-panel active">
+
+
+
+    <!-- =====================================================
+         BRANCH DATA ENTRY
+         ===================================================== -->
+
+    <div
+      id="view-matrix"
+      class="view-panel active"
+    >
+
+
       <div class="header-container">
+
+
         <div>
-          <div class="eyebrow" id="matrix-week-label"></div>
-          <h1 id="matrix-title">AWADA Weekly Operational Matrix</h1>
-          <p class="subtitle">Enter Top 3 Winners and Top 3 Losers for every shift. Entries auto-save securely to the current branch.</p>
+
+          <div
+            class="eyebrow"
+            id="matrix-week-label"
+          >
+          </div>
+
+
+          <h1 id="matrix-title">
+            AWADA Weekly Operational Matrix
+          </h1>
+
+
+          <p class="subtitle">
+
+            Enter shift results quickly and securely.
+            All entries are saved automatically.
+
+          </p>
+
         </div>
-        <div class="header-chip">ENTER → next field · SHIFT+ENTER → previous field</div>
+
+
+        <div class="header-chip">
+
+          ENTER → next field
+          &nbsp;·&nbsp;
+          SHIFT + ENTER → previous field
+
+        </div>
+
+
       </div>
+
+
+
+      <!-- FAST ENTRY INFORMATION -->
 
       <div class="info-banner">
-        <strong>Fast entry:</strong> Login → Client P/L → Coverage P/L → next row. Currency formatting is applied when you leave a numeric field.
+
+        <strong>
+          Fast Entry:
+        </strong>
+
+        Login → Client P/L → Coverage P/L → next row.
+
+        Currency formatting is applied automatically
+        after leaving the field.
+
       </div>
+
+
+
+      <!-- DATA ENTRY TABLE -->
 
       <div class="table-card matrix-card">
+
+
         <div class="table-scroll">
+
+
           <table class="matrix-table entry-table">
+
+
             <thead>
+
               <tr>
-                <th>DAY</th>
-                <th>SHIFT</th>
-                <th>TYPE</th>
-                <th>RANK</th>
-                <th>TRADER LOGIN</th>
-                <th>CLIENT P/L ($)</th>
-                <th>COVERAGE P/L ($)</th>
-                <th>COVERAGE %</th>
+
+                <th>
+                  DAY
+                </th>
+
+                <th>
+                  SHIFT
+                </th>
+
+                <th>
+                  TYPE
+                </th>
+
+                <th>
+                  RANK
+                </th>
+
+                <th>
+                  TRADER LOGIN
+                </th>
+
+                <th>
+                  CLIENT P/L ($)
+                </th>
+
+                <th>
+                  COVERAGE P/L ($)
+                </th>
+
+                <th>
+                  COVERAGE %
+                </th>
+
               </tr>
+
             </thead>
-            <tbody id="matrix-tbody"></tbody>
+
+
+            <tbody id="matrix-tbody">
+            </tbody>
+
+
           </table>
+
+
         </div>
+
+
       </div>
+
+
     </div>
 
-    <div id="view-group5" class="view-panel" style="display:none;">
+
+
+    <!-- =====================================================
+         GROUP 5 — EXECUTIVE DASHBOARD
+         ===================================================== -->
+
+    <div
+      id="view-group5"
+      class="view-panel"
+      style="display:none;"
+    >
+
+
+      <!-- EXECUTIVE HEADER -->
+
       <div class="header-container">
+
+
         <div>
-          <div class="eyebrow" id="executive-week-label"></div>
-          <h1>Group 5 — Executive Dashboard</h1>
-          <p class="subtitle">Weekly ranking engine nets repeated logins first, then ranks them across the selected shifts.</p>
+
+
+          <div
+            class="eyebrow"
+            id="executive-week-label"
+          >
+          </div>
+
+
+          <h1>
+            Group 5 — Executive Dashboard
+          </h1>
+
+
+          <p class="subtitle">
+
+            Weekly Top 5 Winners &amp; Losers
+            across all operational branches.
+
+          </p>
+
+
         </div>
-        <button class="danger-btn" onclick="archiveAndResetWeek()">Archive &amp; Start New Week</button>
+
+
+
+        <button
+          class="danger-btn"
+          onclick="archiveAndResetWeek()"
+        >
+
+          Archive &amp; Start New Week
+
+        </button>
+
+
       </div>
 
-      <div class="toolbar-card">
-        <label class="control-group">
-          <span>SHIFT VIEW</span>
-          <select id="management-shift-filter" class="control" onchange="renderManagementView()">
-            <option value="ALL">All Shifts — ON + AM + PM</option>
-            <option value="ON">ON Only</option>
-            <option value="AM">AM Only</option>
-            <option value="PM">PM Only</option>
-          </select>
-        </label>
-        <label class="control-group search-grow">
-          <span>TRADER SEARCH</span>
-          <input id="trader-search" class="control" type="search" placeholder="Search login across every branch..." oninput="renderTraderSearch()">
-        </label>
-      </div>
 
-      <div id="executive-kpis" class="kpi-grid"></div>
-      <div id="trader-search-results" class="search-results" style="display:none;"></div>
+
+      <!-- ===================================================
+           COMBINED TOP 5
+           =================================================== -->
 
       <section class="section-block">
+
+
         <div class="section-heading">
+
+
           <div>
-            <div class="eyebrow">ALL BRANCHES COMBINED</div>
-            <h2>Executive Top 5</h2>
+
+            <div class="eyebrow">
+              ALL BRANCHES COMBINED
+            </div>
+
+
+            <h2>
+              Executive Top 5
+            </h2>
+
           </div>
-          <div class="section-note">Broker Net = Coverage P/L − Client P/L</div>
+
+
+          <div class="section-note">
+
+            Weekly Net Result
+            &nbsp;·&nbsp;
+            Monday–Friday
+
+          </div>
+
+
         </div>
-        <div id="combined-tables-container" class="dashboard-grid executive-pair"></div>
+
+
+
+        <div
+          id="combined-tables-container"
+          class="dashboard-grid executive-pair"
+        >
+        </div>
+
+
       </section>
 
+
+
+      <!-- ===================================================
+           BRANCH TOP 5
+           =================================================== -->
+
       <section class="section-block">
+
+
         <div class="section-heading">
+
+
           <div>
-            <div class="eyebrow">BRANCH BREAKDOWN</div>
-            <h2>Top 5 by Branch</h2>
+
+            <div class="eyebrow">
+              BRANCH PERFORMANCE
+            </div>
+
+
+            <h2>
+              Top 5 by Branch
+            </h2>
+
           </div>
+
+
+          <div class="section-note">
+
+            Client P/L
+            &nbsp;·&nbsp;
+            Coverage P/L
+            &nbsp;·&nbsp;
+            Broker Net
+
+          </div>
+
+
         </div>
-        <div id="management-tables-container" class="dashboard-grid"></div>
+
+
+
+        <div
+          id="management-tables-container"
+          class="dashboard-grid"
+        >
+        </div>
+
+
       </section>
+
+
     </div>
 
-    <div id="view-archive" class="view-panel" style="display:none;">
+
+
+    <!-- =====================================================
+         WEEKLY ARCHIVE
+         ===================================================== -->
+
+    <div
+      id="view-archive"
+      class="view-panel"
+      style="display:none;"
+    >
+
+
       <div class="header-container">
+
+
         <div>
-          <h1>Weekly Archive</h1>
-          <p class="subtitle">Historical Top 5 snapshots. New archives retain the full matrix so you can switch between All / ON / AM / PM.</p>
+
+
+          <div class="eyebrow">
+            HISTORICAL REPORTING
+          </div>
+
+
+          <h1>
+            Weekly Archive
+          </h1>
+
+
+          <p class="subtitle">
+
+            Review historical Top 5 Winners,
+            Top 5 Losers and branch performance.
+
+          </p>
+
+
         </div>
+
+
+
+        <!--
+          The archive filter remains available because
+          historical data may still contain ON / AM / PM
+          information.
+
+          You can remove this later when the new
+          Summary + Coverage History importer becomes
+          the permanent source of truth.
+        -->
+
         <label class="control-group archive-filter">
-          <span>SHIFT VIEW</span>
-          <select id="archive-shift-filter" class="control" onchange="renderArchiveDetail(selectedArchiveWeek)">
-            <option value="ALL">All Shifts</option>
-            <option value="ON">ON</option>
-            <option value="AM">AM</option>
-            <option value="PM">PM</option>
+
+
+          <span>
+            SHIFT VIEW
+          </span>
+
+
+          <select
+            id="archive-shift-filter"
+            class="control"
+            onchange="renderArchiveDetail(selectedArchiveWeek)"
+          >
+
+            <option value="ALL">
+              All Shifts
+            </option>
+
+            <option value="ON">
+              ON
+            </option>
+
+            <option value="AM">
+              AM
+            </option>
+
+            <option value="PM">
+              PM
+            </option>
+
           </select>
+
+
         </label>
+
+
       </div>
+
+
+
+      <!-- ARCHIVE BODY -->
 
       <div class="archive-layout">
+
+
+        <!-- ARCHIVED WEEKS -->
+
         <div class="archive-sidebar">
-          <div id="archive-week-list" class="archive-week-list"></div>
+
+
+          <div
+            id="archive-week-list"
+            class="archive-week-list"
+          >
+          </div>
+
+
         </div>
+
+
+
+        <!-- ARCHIVED WEEK CONTENT -->
+
         <div class="archive-content">
-          <div id="archive-detail-container"></div>
+
+
+          <div id="archive-detail-container">
+          </div>
+
+
         </div>
+
+
       </div>
+
+
     </div>
+
+
   </main>
 
-  <div id="toast" class="toast" aria-live="polite"></div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="app.js"></script>
+
+  <!-- =======================================================
+       SYSTEM TOAST / NOTIFICATIONS
+       ======================================================= -->
+
+  <div
+    id="toast"
+    class="toast"
+    aria-live="polite"
+  >
+  </div>
+
+
+
+  <!-- =======================================================
+       FIREBASE
+       ======================================================= -->
+
+  <script
+    src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"
+  >
+  </script>
+
+
+  <script
+    src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"
+  >
+  </script>
+
+
+
+  <!-- =======================================================
+       APPLICATION
+       ======================================================= -->
+
+  <script src="app.js">
+  </script>
+
+
 </body>
+
 </html>
