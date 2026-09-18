@@ -983,7 +983,7 @@ function renderAccountsSection(accountsObject, title = 'All Accounts', mode = 's
     .sort((a, b) => b.client - a.client || String(a.login).localeCompare(String(b.login)));
 
   const tableRows = rows.length ? rows.map(row => `
-    <tr data-account-row data-search="${escapeHTML(`${row.login} ${row.name || ''} ${row.group || ''}`.toLowerCase())}">
+    <tr data-account-row data-login="${escapeHTML(String(row.login))}" data-name="${escapeHTML(row.name || '')}" data-coverage="${Number(row.coverage || 0)}" data-client="${Number(row.client || 0)}" data-search="${escapeHTML(`${row.login} ${row.name || ''} ${row.group || ''}`.toLowerCase())}">
       <td><strong>${escapeHTML(row.login)}</strong></td>
       <td>${escapeHTML(row.name || '—')}</td>
       <td class="muted">${escapeHTML(row.group || '—')}</td>
@@ -997,7 +997,20 @@ function renderAccountsSection(accountsObject, title = 'All Accounts', mode = 's
     <div class="accounts-panel">
       <div class="accounts-panel-head">
         <div><div class="eyebrow">FULL SOURCE DATA</div><h3>${escapeHTML(title)} <span>${rows.length}</span></h3></div>
-        <input class="account-search" type="search" placeholder="Search login / name / group…" oninput="filterAccountTable(this)">
+        <div class="account-controls">
+          <label class="account-sort-label">Sort by
+            <select class="control account-sort" onchange="sortAccountTable(this)">
+              <option value="client:desc">Client P/L · Highest first</option>
+              <option value="login:asc">Login · Lowest first</option>
+              <option value="login:desc">Login · Highest first</option>
+              <option value="name:asc">Name · A–Z</option>
+              <option value="name:desc">Name · Z–A</option>
+              <option value="coverage:desc">Cover Profit · Highest first</option>
+              <option value="coverage:asc">Cover Profit · Lowest first</option>
+            </select>
+          </label>
+          <input class="account-search" type="search" placeholder="Search login / name / group…" oninput="filterAccountTable(this)">
+        </div>
       </div>
       <div class="table-scroll tall-scroll">
         <table class="matrix-table">
@@ -1007,6 +1020,30 @@ function renderAccountsSection(accountsObject, title = 'All Accounts', mode = 's
       </div>
     </div>
   `;
+}
+
+// Reorder existing rows so searches remain applied and only this table changes.
+function compareAccountSort(a, b, field, direction) {
+  const sign = direction === 'desc' ? -1 : 1;
+  let result;
+  if (field === 'coverage' || field === 'client') {
+    result = Number(a[field] || 0) - Number(b[field] || 0);
+  } else {
+    result = String(a[field] || '').localeCompare(String(b[field] || ''), undefined,
+      { numeric: field === 'login', sensitivity: 'base' });
+  }
+  return sign * result || String(a.login).localeCompare(String(b.login), undefined, { numeric: true });
+}
+
+function sortAccountTable(select) {
+  const panel = select.closest('.accounts-panel');
+  const body = panel?.querySelector('tbody');
+  if (!body) return;
+  const [field, direction] = select.value.split(':');
+  if (!['login', 'name', 'coverage', 'client'].includes(field)) return;
+  Array.from(body.querySelectorAll('[data-account-row]'))
+    .sort((a, b) => compareAccountSort(a.dataset, b.dataset, field, direction))
+    .forEach(row => body.appendChild(row));
 }
 
 function filterAccountTable(input) {

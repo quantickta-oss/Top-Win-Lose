@@ -1001,3 +1001,12 @@ button, input, select { font: inherit; }
     width: 100%;
   }
 }
+
+/* Full source-data sorting and search */
+.account-controls { display:flex; align-items:flex-end; justify-content:flex-end; gap:12px; flex-wrap:wrap; }
+.account-sort-label { display:flex; flex-direction:column; gap:5px; font-size:12px; }
+.account-sort { min-width:220px; max-width:100%; }
+@media (max-width:700px) {
+  .account-controls { width:100%; justify-content:flex-start; }
+  .account-sort-label, .account-controls .account-search { width:100%; }
+}

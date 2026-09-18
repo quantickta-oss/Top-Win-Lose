@@ -19,3 +19,6 @@ Existing weekly reports remain available. Daily records use pl_daily_store; exis
 
 VALIDATION
 Local tests cover accepted/rejected date ranges, day boundaries, daily aggregation, replacement without double counting, full-week precedence, week/year boundaries, save paths and view rendering with a mocked database. Live Firebase reads/writes are not verified.
+
+FULL SOURCE DATA SORTING
+Use Sort by above any full source-data table to order by Login (numeric ascending/descending), Name (A–Z/Z–A), or Cover Profit (highest/lowest first). The original Client P/L highest-first option remains available. Sorting preserves the current search and does not change stored P/L or rankings.
