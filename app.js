@@ -1,6 +1,6 @@
 // ============================================================================
-// P/L SYSTEM — Daily / Weekly Import Edition
-// Daily imports after night shift, with automatic weekly aggregation and full-week import support.
+// P/L SYSTEM — End-of-day Upload Edition
+// One Monday-to-date upload per day. Weekly = latest snapshot; daily = consecutive snapshot difference.
 // Client P/L: MT5 weekly Summary -> Profit column.
 // Coverage P/L: Trade History -> OUT deals inside detected week -> Profit only.
 // ============================================================================
@@ -50,6 +50,8 @@ const allBranches = [
 // ============================================================================
 
 let currentBranch = 'awada';
+let cumulativeStore = {};
+let importBusy = false;
 let rawWeeklyStore = {};
 let dailyStore = {};
 let reportMode = 'weekly';
@@ -87,6 +89,78 @@ db.ref('pl_daily_store').on('value', snapshot => {
   console.error('Daily reports could not be loaded:', error);
   showToast('Daily reports could not be loaded. Check Firebase permissions for pl_daily_store.', 'error');
 });
+
+db.ref('pl_cumulative_store').on('value', snapshot => {
+  cumulativeStore = snapshot.val() || {};
+  rebuildReports();
+  refreshReports();
+}, error => {
+  console.error(error);
+  showToast('Reports could not load. Check database permissions.', 'error');
+});
+
+function precedingDate(date) {
+  const d = isoToDate(date); d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function reportStats(accounts, matchedDeals = {}, unmatchedDeals = {}) {
+  const rows = objectValues(accounts);
+  return {accountCount:rows.length,
+    clientTotal:roundMoney(rows.reduce((sum,r)=>sum+Number(r.client || 0),0)),
+    coverageTotal:roundMoney(rows.reduce((sum,r)=>sum+Number(r.coverage || 0),0)),
+    brokerTotal:roundMoney(rows.reduce((sum,r)=>sum+Number(r.brokerNet || 0),0)),
+    matchedCoverDeals:objectValues(matchedDeals).length, unmatchedCoverDeals:objectValues(unmatchedDeals).length};
+}
+
+function dailyFromSnapshot(current, previous) {
+  const monday = current.weekStart === current.weekEnd;
+  if (!monday && (!previous || previous.weekStart !== current.weekStart || previous.weekEnd !== precedingDate(current.weekEnd))) return null;
+  const accounts = {};
+  const prior = monday ? {} : previous.accounts || {};
+  const latest = current.accounts || {};
+  new Set([...Object.keys(prior), ...Object.keys(latest)]).forEach(login => {
+    const a = latest[login] || {}, b = prior[login] || {};
+    const client = roundMoney(Number(a.client || 0) - Number(b.client || 0));
+    const coverage = roundMoney(Number(a.coverage || 0) - Number(b.coverage || 0));
+    accounts[login] = {login, name:a.name || b.name || '', group:a.group || b.group || '', client, coverage, brokerNet:brokerNet(client,coverage)};
+  });
+  const onDate = deals => Object.fromEntries(objectValues(deals).filter(d=>String(d.time).slice(0,10) === current.weekEnd.replaceAll('-','.')).map((d,i)=>[d.recordKey || String(i),d]));
+  const matchedDeals = onDate(current.matchedDeals), unmatchedDeals = onDate(current.unmatchedDeals);
+  return {...current, kind:'derivedDaily', weekStart:current.weekEnd, weekKey:makeWeekKey(current.weekEnd,current.weekEnd),
+    weekLabel:formatISODate(current.weekEnd), accounts, matchedDeals, unmatchedDeals,
+    stats:reportStats(accounts, matchedDeals, unmatchedDeals)};
+}
+
+function previousSnapshot(branch, record) {
+  return cumulativeStore[branch]?.[makeWeekKey(record.weekStart,precedingDate(record.weekEnd))];
+}
+
+function dailyMissingNotice(branch) {
+  const missing = objectValues(cumulativeStore[branch]).filter(r=>!dailyFromSnapshot(r,previousSnapshot(branch,r))).map(r=>r.weekEnd);
+  return missing.length ? `<p class="warning-text">Daily result unavailable for ${escapeHTML(missing.join(', '))}: upload the previous trading day's Monday-to-date report. Week-to-date totals remain available.</p>` : '';
+}
+
+function snapshotSummary(record, branch) {
+  const daily = dailyFromSnapshot(record,previousSnapshot(branch,record));
+  const card = (title, stats) => `<div class="branch-card"><h3>${escapeHTML(title)}</h3>${stats ? `<p>Client P/L <strong>${formatCurrency(stats.clientTotal)}</strong></p><p>Cover Profit <strong>${formatCurrency(stats.coverageTotal)}</strong></p><p>Broker Net <strong>${formatCurrency(stats.brokerTotal)}</strong></p>` : `<p class="warning-text">Upload the report ending ${escapeHTML(precedingDate(record.weekEnd))} to calculate this day.</p>`}</div>`;
+  return `<div class="preview-grid">${card('This day · '+formatISODate(record.weekEnd),daily?.stats)}${card('This week · '+formatWeekLabel(record.weekStart,record.weekEnd),record.stats)}</div>`;
+}
+
+async function uploadAndCalculate() {
+  if (importBusy) return;
+  importBusy = true;
+  const button = document.getElementById('upload-calculate-btn');
+  if (button) {button.disabled = true; button.textContent = 'Calculating…';}
+  try {
+    pendingImport = null;
+    await analyzeWeeklyImport();
+    if (pendingImport) await saveWeeklyImport();
+  } finally {
+    importBusy = false;
+    if (button) {button.disabled = false; button.textContent = 'Upload & Calculate';}
+  }
+}
 
 function refreshReports() {
   const panel = document.querySelector('.view-panel.active')?.id;
@@ -140,7 +214,7 @@ function aggregateDays(records, meta) {
 }
 
 function rebuildReports() {
-  if (reportMode === 'daily') { weeklyStore = dailyStore; return; }
+
   weeklyStore = {};
   allBranches.forEach(branch => {
     const groups = {};
@@ -157,6 +231,22 @@ function rebuildReports() {
       weeklyStore[branch][key] = {...record, kind:'weekly', weekLabel:`${formatWeekLabel(record.weekStart, record.weekEnd)} · Full-week import`};
     });
   });
+  const derived = {};
+  allBranches.forEach(branch => {
+    derived[branch] = {...(dailyStore[branch] || {})};
+    const snapshots = objectValues(cumulativeStore[branch]).sort((a,b)=>a.weekEnd.localeCompare(b.weekEnd));
+    const touchedWeeks = new Set(snapshots.map(r=>r.weekStart));
+    Object.entries(derived[branch]).forEach(([key,r])=>{if(touchedWeeks.has(containingWeek(r.weekStart).weekStart)) delete derived[branch][key];});
+    snapshots.forEach(record => {
+      const meta = containingWeek(record.weekStart);
+      weeklyStore[branch][meta.weekKey] = {...record,kind:'cumulative',weekKey:meta.weekKey,
+        weekLabel:formatWeekLabel(record.weekStart,record.weekEnd) + ' · Through ' + formatISODate(record.weekEnd,false)};
+      const day = dailyFromSnapshot(record,previousSnapshot(branch,record));
+      if (day) derived[branch][day.weekKey] = day;
+    });
+  });
+  if (reportMode === 'daily') weeklyStore = derived;
+
 }
 
 db.ref('pl_cover_position_map').on('value', snapshot => {
@@ -262,7 +352,7 @@ function switchTab(tabKey) {
     selectedBranchWeekKey = null;
 
     const title = document.getElementById('branch-title') || document.getElementById('matrix-title');
-    if (title) title.textContent = `${tabKey.toUpperCase()} — Daily / Weekly Import`;
+    if (title) title.textContent = `${tabKey.toUpperCase()} — End-of-day Upload`;
 
     resetImportUI(false);
     renderBranchWeekLedger();
@@ -409,9 +499,8 @@ function validateTradingWeek(startISO, endISO) {
   };
   if (!valid(startISO) || !valid(endISO)) throw new Error('Invalid Summary date.');
   const start = isoToDate(startISO), end = isoToDate(endISO);
-  if (startISO === endISO && start.getDay() >= 1 && start.getDay() <= 5) return;
-  if (start.getDay() === 1 && end.getDay() === 5 && daysBetween(startISO,endISO) === 4) return;
-  throw new Error('Export a single trading day (same start/end date, Monday–Friday), or a full Monday–Friday week. Week-to-date ranges are not accepted because they overlap daily totals.');
+  if (start.getDay() === 1 && end.getDay() >= 1 && end.getDay() <= 5 && daysBetween(startISO,endISO) >= 0 && daysBetween(startISO,endISO) <= 4) return;
+  throw new Error('Export Monday through the completed trading day: Monday–Monday, Monday–Tuesday, and so on through Friday.');
 }
 
 function timestampInWeek(value, startDot, endDot) {
@@ -531,7 +620,7 @@ function parseWeeklySummaryHTML(html) {
     weekStart,
     weekEnd,
     weekKey: makeWeekKey(weekStart, weekEnd),
-    kind: weekStart === weekEnd ? 'daily' : 'weekly',
+    kind: 'cumulative',
     weekLabel: weekStart === weekEnd ? formatISODate(weekStart) : formatWeekLabel(weekStart, weekEnd),
     rawRows,
     clientRows
@@ -550,6 +639,7 @@ function parseCoverageHistoryHTML(html, fileName = '') {
   const accountId = accountMatch ? accountMatch[1] : `file_${simpleHash(fileName || bodyText.slice(0, 300))}`;
 
   let section = '';
+  let hasDealsSection = false;
   const positions = [];
   const orders = {};
   const deals = [];
@@ -561,7 +651,7 @@ function parseCoverageHistoryHTML(html, fileName = '') {
 
     if (rowText === 'Positions') { section = 'positions'; return; }
     if (rowText === 'Orders') { section = 'orders'; return; }
-    if (rowText === 'Deals') { section = 'deals'; return; }
+    if (rowText === 'Deals') { section = 'deals'; hasDealsSection = true; return; }
 
     if (section === 'positions') {
       if (cells.length < 14) return;
@@ -622,7 +712,7 @@ function parseCoverageHistoryHTML(html, fileName = '') {
     }
   });
 
-  if (!deals.length) throw new Error(`No Deals section was found in ${fileName || 'the Coverage History file'}.`);
+  if (!hasDealsSection) throw new Error(`No Deals section was found in ${fileName || 'the Coverage History file'}.`);
   return { accountId, fileName, positions, orders, deals };
 }
 
@@ -729,16 +819,13 @@ function rankEntries(entries, limit = 5) {
 }
 
 async function analyzeWeeklyImport() {
+  const importBranch = currentBranch;
   const summaryFile = document.getElementById('summary-file')?.files?.[0];
   const coverageFiles = Array.from(document.getElementById('coverage-files')?.files || []);
   const analyzeButton = document.getElementById('analyze-import-btn');
 
   if (!summaryFile) {
-    showToast('Choose the daily or full-week MT5 Summary HTML first.', 'error');
-    return;
-  }
-  if (!coverageFiles.length) {
-    showToast('Choose at least one Coverage History HTML file.', 'error');
+    showToast('Choose the Monday-to-date MT5 Summary HTML first.', 'error');
     return;
   }
 
@@ -760,8 +847,11 @@ async function analyzeWeeklyImport() {
 
     // Read the latest persistent mapping directly before matching so an operator
     // cannot analyze against a stale browser snapshot.
-    const mapSnapshot = await db.ref(`pl_cover_position_map/${currentBranch}`).once('value');
-    const liveCoverMapForBranch = mapSnapshot.val() || {};
+    const savedSnapshots = await db.ref(`pl_cumulative_store/${currentBranch}`).once('value');
+    cumulativeStore[currentBranch] = savedSnapshots.val() || {};
+    const mapSnapshot = coverageFiles.length
+      ? await db.ref(`pl_cover_position_map/${currentBranch}`).once('value') : null;
+    const liveCoverMapForBranch = mapSnapshot?.val() || {};
 
     const mappingUpdates = {};
 
@@ -849,8 +939,9 @@ async function analyzeWeeklyImport() {
     const matchedCoverageProfit = roundMoney(matchedDeals.reduce((sum, row) => sum + row.profit, 0));
     const unmatchedCoverageProfit = roundMoney(unmatchedDeals.reduce((sum, row) => sum + row.profit, 0));
 
+    if (currentBranch !== importBranch) throw new Error('Branch changed during upload. Please upload again in the correct branch.');
     pendingImport = {
-      version: 4,
+      version: 5,
       branch: currentBranch,
       kind: summary.kind,
       weekKey: summary.weekKey,
@@ -861,6 +952,7 @@ async function analyzeWeeklyImport() {
       weekLabel: summary.weekLabel,
       summaryFileName: summaryFile.name,
       coverageFileNames: coverageFiles.map(file => file.name),
+      coverageOmitted: coverageFiles.length === 0,
       summaryRawRows: summary.rawRows,
       summaryClientCount: summary.clientRows.length,
       accounts,
@@ -924,6 +1016,8 @@ function renderImportPreview() {
   const stats = pendingImport.stats;
 
   preview.innerHTML = `
+    ${snapshotSummary(pendingImport,currentBranch)}
+    ${pendingImport.coverageOmitted ? '<p class="subtitle">No Coverage History uploaded · week-to-date Coverage P/L is 0.</p>' : ''}
     <div class="import-summary-grid">
       <div class="import-stat"><span>DETECTED PERIOD</span><strong>${escapeHTML(pendingImport.weekLabel)}</strong></div>
       <div class="import-stat"><span>CLIENT ACCOUNTS</span><strong>${stats.accountCount}</strong></div>
@@ -934,8 +1028,8 @@ function renderImportPreview() {
     </div>
 
     <div class="preview-grid">
-      ${rankingCard('Top 5 Winners', pendingImport.winners, 'winner', false)}
-      ${rankingCard('Top 5 Losers', pendingImport.losers, 'loser', false)}
+      ${rankingCard('This week · Top 5 Winners', pendingImport.winners, 'winner', false)}
+      ${rankingCard('This week · Top 5 Losers', pendingImport.losers, 'loser', false)}
     </div>
 
     ${pendingImport.unmatchedDeals.length
@@ -1107,10 +1201,11 @@ async function saveWeeklyImport() {
     return;
   }
 
+  const analyzedImport = pendingImport;
   // Check Firebase directly so replacement protection does not depend on listener timing.
   let existing;
   try {
-    const existingSnapshot = await db.ref(`${pendingImport.kind === 'daily' ? 'pl_daily_store' : 'pl_weekly_store'}/${currentBranch}/${pendingImport.weekKey}`).once('value');
+    const existingSnapshot = await db.ref(`pl_cumulative_store/${currentBranch}/${pendingImport.weekKey}`).once('value');
     existing = existingSnapshot.val();
   } catch (err) {
     showToast('Cannot check saved reports. Check database access and retry.', 'error');
@@ -1132,6 +1227,10 @@ async function saveWeeklyImport() {
     if (!proceed) return;
   }
 
+  if (pendingImport !== analyzedImport || currentBranch !== analyzedImport.branch) {
+    showToast('Branch changed. Please upload again in the correct branch.', 'error');
+    return;
+  }
   const saveButton = document.getElementById('save-week-import-btn');
   if (saveButton) {
     saveButton.disabled = true;
@@ -1148,7 +1247,7 @@ async function saveWeeklyImport() {
   });
 
   const record = {
-    version: 4,
+    version: 5,
     branch: currentBranch,
     kind: pendingImport.kind,
     weekKey: pendingImport.weekKey,
@@ -1158,7 +1257,8 @@ async function saveWeeklyImport() {
     savedAt: new Date().toISOString(),
     source: {
       summaryFile: pendingImport.summaryFileName,
-      coverageFiles: pendingImport.coverageFileNames
+      coverageFiles: pendingImport.coverageFileNames,
+      coverageOmitted: pendingImport.coverageOmitted === true
     },
     summary: {
       rawRows: pendingImport.summaryRawRows,
@@ -1172,7 +1272,7 @@ async function saveWeeklyImport() {
   };
 
   const updates = {};
-  updates[`${pendingImport.kind === 'daily' ? 'pl_daily_store' : 'pl_weekly_store'}/${currentBranch}/${pendingImport.weekKey}`] = record;
+  updates[`pl_cumulative_store/${currentBranch}/${pendingImport.weekKey}`] = record;
 
   Object.entries(pendingImport.mappingUpdates || {}).forEach(([accountKey, positions]) => {
     Object.entries(positions || {}).forEach(([positionKey, login]) => {
@@ -1182,8 +1282,10 @@ async function saveWeeklyImport() {
 
   try {
     await db.ref().update(updates);
-    setReportMode(pendingImport.kind);
-    selectedBranchWeekKey = pendingImport.weekKey;
+    (cumulativeStore[currentBranch] ||= {})[pendingImport.weekKey] = record;
+    setReportMode('weekly');
+    selectedBranchWeekKey = containingWeek(record.weekStart).weekKey;
+    renderImportPreview();
     showToast(`${currentBranch.toUpperCase()} ${pendingImport.weekLabel} saved successfully.`);
     setImportStatus(`Saved ${pendingImport.weekLabel}. This record now feeds Group 5 automatically.`, 'success');
     clearFileInputs();
@@ -1213,7 +1315,7 @@ function resetImportUI(clearFiles = true) {
   if (preview) preview.innerHTML = '';
   const saveButton = document.getElementById('save-week-import-btn');
   if (saveButton) saveButton.disabled = true;
-  setImportStatus('Upload the daily or full-week Summary and Coverage History.', 'neutral');
+  setImportStatus('Upload the Monday-to-date Summary. Coverage History is optional.', 'neutral');
   renderExistingWeekStatus();
 }
 
@@ -1222,7 +1324,7 @@ function renderExistingWeekStatus() {
   if (!el) return;
 
   if (pendingImport) {
-    const existing = (pendingImport.kind === 'daily' ? dailyStore : rawWeeklyStore)?.[currentBranch]?.[pendingImport.weekKey];
+    const existing = cumulativeStore?.[currentBranch]?.[pendingImport.weekKey];
     el.innerHTML = existing
       ? `<span class="status-badge check">RE-IMPORT</span><strong>${escapeHTML(pendingImport.weekLabel)}</strong><small>Existing saved report will be replaced only after confirmation.</small>`
       : `<span class="status-badge good">NEW REPORT</span><strong>${escapeHTML(pendingImport.weekLabel)}</strong><small>Ready to save after analysis.</small>`;
@@ -1255,7 +1357,7 @@ function renderBranchWeekLedger() {
 
   const records = getBranchRecords(currentBranch);
   if (!records.length) {
-    container.innerHTML = '<div class="empty-state"><strong>No reports saved in this view.</strong> Your first night-shift import will appear here permanently.</div>';
+    container.innerHTML = dailyMissingNotice(currentBranch) + '<div class="empty-state">No calculated daily reports in this view yet.</div>';
     const detail = document.getElementById('branch-week-detail');
     if (detail) detail.innerHTML = '';
     return;
@@ -1266,6 +1368,7 @@ function renderBranchWeekLedger() {
   }
 
   container.innerHTML = `
+    ${reportMode === 'daily' ? dailyMissingNotice(currentBranch) : ''}
     <div class="table-card">
       <div class="table-scroll">
         <table class="matrix-table ledger-table">
@@ -1322,6 +1425,7 @@ function renderBranchWeekDetail(weekKey) {
 
   container.innerHTML = `
     <section class="saved-detail">
+      ${record.kind === 'cumulative' ? snapshotSummary(record,currentBranch) : ''}
       <div class="section-heading">
         <div><div class="eyebrow">SAVED REPORT · ${escapeHTML(currentBranch.toUpperCase())}</div><h2>${escapeHTML(record.weekLabel || weekKey)}</h2></div>
         <div class="section-note">Saved ${escapeHTML(formatSavedAt(record.savedAt))}</div>
@@ -1336,7 +1440,7 @@ function renderBranchWeekDetail(weekKey) {
         <div class="import-stat"><span>UNMATCHED COVER</span><strong class="${Number(stats.unmatchedCoverDeals || unmatchedDeals.length) ? 'warning-text' : ''}">${Number(stats.unmatchedCoverDeals || unmatchedDeals.length)}</strong></div>
       </div>
 
-      <p class="subtitle">${record.kind === 'aggregate' ? 'Daily totals combined. Saved trading dates: ' + escapeHTML(record.days.join(', ')) + '. Missing days are not assumed to be zero.' : record.kind === 'weekly' ? 'Full-week import takes priority over daily totals for this branch and week.' : 'Single trading-day report, saved after night shift.'}</p>
+      <p class="subtitle">${record.kind === 'aggregate' ? 'Daily totals combined. Saved trading dates: ' + escapeHTML(record.days.join(', ')) + '. Missing days are not assumed to be zero.' : record.kind === 'cumulative' ? 'Week-to-date totals from the latest upload. This day is the change since the previous trading day.' : record.kind === 'derivedDaily' ? 'Change between consecutive week-to-date reports. Historical corrections in a later export are included in this change; coverage audit lists closes dated this day.' : 'Previously saved report.'}</p>
       <div class="preview-grid">
         ${rankingCard('Top 5 Winners', ranked.winners, 'winner', false)}
         ${rankingCard('Top 5 Losers', ranked.losers, 'loser', false)}
@@ -1362,7 +1466,7 @@ function getWeekCatalog() {
           weekKey,
           weekStart: record.weekStart || weekKey.split('_')[0] || '',
           weekEnd: record.weekEnd || weekKey.split('_')[1] || '',
-          weekLabel: reportMode === 'daily' ? formatISODate(record.weekStart) : formatWeekLabel(record.weekStart, record.weekEnd),
+          weekLabel: reportMode === 'daily' ? formatISODate(record.weekStart) : 'Week of ' + formatISODate(record.weekStart,false),
           branches: []
         };
       }
@@ -1429,7 +1533,7 @@ function renderManagementView() {
     if (select) select.innerHTML = '<option value="">No saved reports</option>';
     const combined = document.getElementById('combined-tables-container');
     const branches = document.getElementById('management-tables-container');
-    if (combined) combined.innerHTML = '<div class="empty-state wide"><strong>No reports in this view yet.</strong> Saved branch reports will automatically appear here.</div>';
+    if (combined) combined.innerHTML = '<div class="empty-state wide"><strong>No calculated reports in this view yet.</strong> Daily results need the previous trading day’s upload (Monday starts from zero).</div>';
     if (branches) branches.innerHTML = '';
     renderExecutiveSourceStatus(null);
     const note = document.getElementById('executive-week-note');
@@ -1465,7 +1569,7 @@ function renderManagementView() {
         return `
           <div class="branch-pair-block">
             <div class="branch-pair-title"><strong>${escapeHTML(branch.toUpperCase())}</strong><span class="status-badge neutral">NOT IMPORTED</span></div>
-            <div class="empty-state compact">No report saved for this period.</div>
+            <div class="empty-state compact">No calculated result for this period. Daily results require consecutive uploads.</div>
           </div>`;
       }
 
@@ -1473,7 +1577,7 @@ function renderManagementView() {
         <div class="branch-pair-block">
           <div class="branch-pair-title">
             <strong>${escapeHTML(branch.toUpperCase())}</strong>
-            <span class="status-badge ${Number(result.record.stats?.unmatchedCoverDeals || 0) ? 'check' : 'good'}">${Number(result.record.stats?.unmatchedCoverDeals || 0) ? 'CHECK · ' : ''}${result.record.kind === 'aggregate' ? result.record.days.length + '/5 DAYS' : result.record.kind === 'daily' ? 'DAILY' : 'FULL WEEK'}</span>
+            <span class="status-badge ${Number(result.record.stats?.unmatchedCoverDeals || 0) ? 'check' : 'good'}">${Number(result.record.stats?.unmatchedCoverDeals || 0) ? 'CHECK · ' : ''}${result.record.kind === 'aggregate' ? result.record.days.length + '/5 DAYS' : result.record.kind === 'derivedDaily' || result.record.kind === 'daily' ? 'DAILY' : result.record.kind === 'cumulative' ? 'THROUGH ' + escapeHTML(result.record.weekEnd) : 'FULL WEEK'}</span>
           </div>
           <div class="dashboard-grid executive-pair">
             ${rankingCard('Top 5 Winners', result.winners, 'winner', false)}
@@ -1513,10 +1617,11 @@ function renderExecutiveSourceStatus(weekKey) {
 
   note.innerHTML = `
     <span class="status-dot ${branchesSaved ? 'good' : 'neutral'}"></span>
-    <strong>${branchesSaved}/${allBranches.length}</strong> branches saved ·
+    <strong>${branchesSaved}/${allBranches.length}</strong> branches included ·
     <strong>${totalAccounts.toLocaleString('en-US')}</strong> account rows ·
     Client P/L <strong class="${clientTotal >= 0 ? 'net-positive' : 'net-negative'}">${formatCurrency(clientTotal)}</strong> ·
     Cover <strong class="${coverageTotal >= 0 ? 'net-positive' : 'net-negative'}">${formatCurrency(coverageTotal)}</strong>
+    ${reportMode === 'weekly' ? '<span> · Combined totals use each branch’s latest upload; see branch dates below.</span>' : '<span> · Branches without a calculated daily result are excluded.</span>'}
     ${unmatched ? `<span class="status-separator">·</span><span class="warning-text">${unmatched} unmatched cover deal(s)</span>` : ''}
   `;
 }
@@ -1686,12 +1791,14 @@ async function clearEverything() {
     await db.ref().update({
       pl_weekly_store: null,
       pl_daily_store: null,
+      pl_cumulative_store: null,
       pl_cover_position_map: null,
       pl_shift_store: null,
       pl_matrix_store: null,
       pl_history: null
     });
 
+    cumulativeStore = {};
     rawWeeklyStore = {};
     dailyStore = {};
     weeklyStore = {};
@@ -1715,7 +1822,7 @@ async function clearEverything() {
     } else {
       renderBranchWeekLedger();
       renderExistingWeekStatus();
-      setImportStatus('All saved P/L data has been cleared. Upload a new daily or weekly report when ready.', 'neutral');
+      setImportStatus('All saved P/L data has been cleared. Upload a new Monday-to-date report when ready.', 'neutral');
     }
 
     showToast('All P/L System data was cleared successfully.');

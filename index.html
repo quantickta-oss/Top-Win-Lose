@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>P/L SYSTEM — Daily & Weekly Dealer Risk Dashboard</title>
-  <link rel="stylesheet" href="styles.css?v=20260918sort">
+  <link rel="stylesheet" href="styles.css?v=20260918optionalcover">
 </head>
 <body>
   <aside class="sidebar">
@@ -46,19 +46,19 @@
       <div class="header-container">
         <div>
           <div class="eyebrow">NIGHT SHIFT · END OF TRADING DAY</div>
-          <h1 id="branch-title">AWADA — Daily / Weekly Import</h1>
-          <p class="subtitle">Import each completed trading day after night shift. Daily results build your Monday–Friday week automatically.</p>
+          <h1 id="branch-title">AWADA — End-of-day Upload</h1>
+          <p class="subtitle">At the end of each day, upload the Manager Summary from Monday through that day; add Coverage History if the branch has cover. Get daily and weekly results together.</p>
         </div>
-        <div class="header-chip">DAILY + FULL WEEK</div>
+        <div class="header-chip">ONE UPLOAD · TWO RESULTS</div>
       </div>
 
       <section class="import-card">
         <div class="import-card-header">
           <div>
-            <div class="eyebrow">DAILY / WEEKLY MT5 IMPORT</div>
-            <h2>Client Summary + Coverage History</h2>
+            <div class="eyebrow">END-OF-DAY UPLOAD</div>
+            <h2>Manager Summary + Optional Coverage</h2>
             <p>
-              Upload a single-day MT5 Trades\Summary (same start and end date), or a full Monday–Friday Summary, plus Coverage History.
+              Always export Monday through the completed day: Monday–Monday, Monday–Tuesday, Monday–Wednesday, and so on.
               The period is detected automatically from the Summary. Coverage counts only <strong>OUT</strong> deals closed inside that period and uses <strong>Profit only</strong>.
             </p>
           </div>
@@ -68,36 +68,29 @@
         <div class="import-controls">
           <label class="file-control">
             <span class="file-label">1 · CLIENT SUMMARY</span>
-            <strong>MT5 Trades\Summary — One day or full week</strong>
+            <strong>Manager Summary — Monday through today</strong>
             <input id="summary-file" type="file" accept=".html,.htm,text/html">
-            <small>Use the completed MT5 trading date, even when uploading after midnight. Do not upload overlapping week-to-date exports.</small>
+            <small>Use the completed trading date, even if uploading after midnight.</small>
           </label>
 
           <label class="file-control">
-            <span class="file-label">2 · COVERAGE HISTORY</span>
-            <strong>Full/longer MT5 coverage history is allowed</strong>
+            <span class="file-label">2 · COVERAGE HISTORY (OPTIONAL)</span>
+            <strong>Coverage History — Monday through today</strong>
             <input id="coverage-files" type="file" accept=".html,.htm,text/html" multiple>
-            <small>Older rows are used only to recover client comments. Only closes inside the detected period are counted.</small>
+            <small>Leave empty if this branch has no cover: Coverage P/L will be 0. Longer history can still be used to match old positions.</small>
           </label>
         </div>
 
-        <div class="import-rule-strip">
-          <div><span>CLIENT P/L</span><strong>Summary Profit</strong></div>
-          <div><span>COVER FILTER</span><strong>OUT deals within period</strong></div>
-          <div><span>COVER P/L</span><strong>Profit only</strong></div>
-          <div><span>RE-IMPORT</span><strong>Replaces same branch/period</strong></div>
-        </div>
-
         <div class="import-actions">
-          <div id="import-status" class="import-status neutral">Upload the daily or full-week Summary and Coverage History.</div>
+          <div id="import-status" class="import-status neutral">Choose the Manager Summary, add coverage if needed, then click Upload & Calculate.</div>
           <div class="action-buttons">
-            <button id="analyze-import-btn" class="secondary-btn" onclick="analyzeWeeklyImport()">Analyze Report</button>
-            <button id="save-week-import-btn" class="primary-btn" onclick="saveWeeklyImport()" disabled>Save Report</button>
+            <button id="upload-calculate-btn" class="primary-btn" onclick="uploadAndCalculate()">Upload &amp; Calculate</button>
+            
             <button class="ghost-btn" onclick="resetImportUI(true)">Clear</button>
           </div>
         </div>
 
-        <p class="subtitle">Weekly totals use saved daily reports unless a full-week report exists. A full-week import overrides the daily total for that branch/week; daily records remain available.</p><div id="import-preview"></div>
+        <p class="subtitle">This week = the latest upload. This day = today’s totals minus the previous day’s totals. Monday starts from zero.</p><div id="import-preview"></div>
       </section>
 
       <section class="section-block">
@@ -108,7 +101,7 @@
           </div>
           <div class="section-note">Daily records and full-week totals — no reset required</div>
         </div>
-        <label class="week-select-control"><span>VIEW</span><select class="control report-mode" onchange="setReportMode(this.value)"><option value="weekly">Whole week</option><option value="daily">Daily · night shift</option></select></label><div id="branch-week-ledger"></div>
+        <label class="week-select-control"><span>VIEW</span><select class="control report-mode" onchange="setReportMode(this.value)"><option value="weekly">This week</option><option value="daily">Daily results</option></select></label><div id="branch-week-ledger"></div>
         <div id="branch-week-detail"></div>
       </section>
     </div>
@@ -121,9 +114,9 @@
         <div>
           <div class="eyebrow">MANAGEMENT · ALL BRANCHES</div>
           <h1>Group 5 — Executive Dashboard</h1>
-          <p class="subtitle">Daily or weekly Top 5, calculated from every client. Weekly rankings combine all saved daily P/L by login.</p>
+          <p class="subtitle">Daily and week-to-date Top 5 from the same uploads. Each branch shows the date of its latest report.</p>
         </div>
-        <div class="header-actions"><label class="week-select-control"><span>VIEW</span><select class="control report-mode" onchange="setReportMode(this.value)"><option value="weekly">Whole week</option><option value="daily">Daily · night shift</option></select></label>
+        <div class="header-actions"><label class="week-select-control"><span>VIEW</span><select class="control report-mode" onchange="setReportMode(this.value)"><option value="weekly">This week</option><option value="daily">Daily results</option></select></label>
           <label class="week-select-control">
             <span>REPORT PERIOD</span>
             <select id="executive-week-select" class="control" onchange="selectExecutiveWeek(this.value)"></select>
@@ -167,11 +160,11 @@
         <div>
           <div class="eyebrow">PERMANENT HISTORY</div>
           <h1>Report Archive</h1>
-          <p class="subtitle">Browse saved days or whole weeks. A full-week import takes priority over daily totals for that branch and week.</p>
+          <p class="subtitle">Browse daily results and week-to-date totals from your saved end-of-day uploads.</p>
         </div>
       </div>
 
-      <label class="week-select-control"><span>VIEW</span><select class="control report-mode" onchange="setReportMode(this.value)"><option value="weekly">Whole week</option><option value="daily">Daily · night shift</option></select></label><div class="archive-layout">
+      <label class="week-select-control"><span>VIEW</span><select class="control report-mode" onchange="setReportMode(this.value)"><option value="weekly">This week</option><option value="daily">Daily results</option></select></label><div class="archive-layout">
         <div class="archive-sidebar">
           <div id="archive-week-list" class="archive-week-list"></div>
         </div>
@@ -186,6 +179,6 @@
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="app.js?v=20260918sort"></script>
+  <script src="app.js?v=20260918optionalcover"></script>
 </body>
 </html>
