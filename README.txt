@@ -97,3 +97,12 @@ JSON backups can still be restored without assigning an invented shift.
 SHIFT UPDATE CHECKS
 Verified separate AM/PM/Overnight saves, edits isolated to one shift, login-only
 validation, Enter navigation, legacy read-only reports, and backup restoration.
+
+EXECUTIVE DASHBOARD — SEPARATE BRANCH RESULTS
+Management now shows a separate result card for all 12 branches, organized by
+group. Each submitted branch displays its Top 3 Winners, Top 3 Losers and
+Client P/L, Cover Net, Broker Net and Net % totals for the selected date/shift.
+Missing reports are labeled Not submitted, not treated as zero results.
+For this dashboard-only update, replace app.js and the HTML files in GitHub.
+Keep your configured config.js. No new Firebase rule changes are required
+if the AM/PM/Overnight rules have already been applied.
