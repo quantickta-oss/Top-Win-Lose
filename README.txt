@@ -1,4 +1,4 @@
-P/L SYSTEM — MANUAL BRANCH REPORTS
+P/L SYSTEM — AM / PM / OVERNIGHT REPORTS
 
 FILES / PORTALS
 management.html (or index.html) — all 12 branches + executive dashboard
@@ -26,12 +26,16 @@ These are selected-client results, not total branch P/L; no extra IB or other
 expenses are subtracted. Top 3 entries are selected by the worker.
 
 REPORTS
-Choose the completed trading date. Enter up to three winners and three losers.
+Choose the trading date and shift: AM, PM or Overnight. Enter results for that
+shift ONLY, not cumulative daily totals. For Overnight, keep the trading date
+the shift belongs to even after midnight. Enter up to three winners and three
+losers per branch per shift. Client Name is removed: enter Login, Client P/L
+and Cover Net only.
 Unused rows stay fully blank. If neither category has clients, tick No clients.
-Save Report creates or updates one report for that branch/date. Archive lists
-saved dates. Clear entries only clears the form until Save Report is pressed.
+Save Report creates or updates one report for that branch/date/shift. Archive lists
+saved dates and shifts. Management shows the selected shift across all branches. Clear entries only clears the form until Save Report is pressed.
 Download backup exports accessible saved reports, not unsaved form entries.
-Restore only adds missing reports; it never replaces existing branch/date data.
+Restore only adds missing reports; it never replaces existing branch/date/shift data.
 
 SHARED ACCESS SETUP — REQUIRED BEFORE USING WITH WORKERS
 The supplied source used a placeholder Firebase key. config.js therefore
@@ -79,3 +83,17 @@ input validation, Enter navigation, local save/reload, and portal branch
 scopes passed automated checks. A full browser visual check was unavailable
 in the preparation environment. Live Firebase login and authorization still
 require testing after configuration.
+
+UPDATING FROM THE DAILY VERSION
+Replace app.js, styles.css and all five HTML pages in GitHub with these files.
+Keep your already configured config.js; do not replace live Firebase settings
+with this package's local-preview configuration. Apply the updated rules in
+Firebase too (uploading the rules file to GitHub does not apply it).
+Each shift has its own key, such as 2026-09-21_am. Saving PM cannot replace AM.
+Previous daily records remain available in Archive, labeled Daily (previous
+version), read-only. They are not automatically assigned to a shift. Previous
+JSON backups can still be restored without assigning an invented shift.
+
+SHIFT UPDATE CHECKS
+Verified separate AM/PM/Overnight saves, edits isolated to one shift, login-only
+validation, Enter navigation, legacy read-only reports, and backup restoration.

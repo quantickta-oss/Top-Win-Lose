@@ -12,17 +12,17 @@
       "$group": {
         ".read": "auth != null && (root.child('pl_manual_roles').child(auth.uid).val() === 'management' || root.child('pl_manual_roles').child(auth.uid).val() === $group)",
         "$branch": {
-          "$date": {
+          "$report": {
             ".write": "auth != null && (root.child('pl_manual_roles').child(auth.uid).val() === 'management' || root.child('pl_manual_roles').child(auth.uid).val() === $group) && newData.exists() && (($group === 'group1' && ($branch === 'awada' || $branch === 'bbc' || $branch === 'fawaz' || $branch === 'egypt')) || ($group === 'group2' && ($branch === 'boudani' || $branch === 'cdi' || $branch === 'ar' || $branch === 'sh')) || ($group === 'group3' && ($branch === 'connect' || $branch === 'badaro' || $branch === 'mt' || $branch === 'tr')))",
-            ".validate": "newData.hasChildren(['version','branch','date','noClients','updatedAt']) && ((newData.child('noClients').val() === true && !newData.child('rows').exists()) || (newData.child('noClients').val() === false && newData.child('rows').exists()))",
+            ".validate": "newData.hasChildren(['version','branch','date','noClients','updatedAt']) && ((newData.child('noClients').val() === true && !newData.child('rows').exists()) || (newData.child('noClients').val() === false && newData.child('rows').exists())) && ((newData.child('version').val() === 2 && newData.hasChild('shift') && $report === newData.child('date').val() + '_' + newData.child('shift').val()) || (newData.child('version').val() === 1 && !newData.hasChild('shift') && $report === newData.child('date').val()))",
             "version": {
-              ".validate": "newData.val() === 1"
+              ".validate": "newData.val() === 1 || newData.val() === 2"
             },
             "branch": {
               ".validate": "newData.val() === $branch"
             },
             "date": {
-              ".validate": "newData.val() === $date && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+              ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
             },
             "updatedAt": {
               ".validate": "newData.isString()"
@@ -32,7 +32,7 @@
             },
             "rows": {
               "$index": {
-                ".validate": "$index.matches(/^[0-5]$/) && newData.hasChildren(['kind','login','name','client','cover'])",
+                ".validate": "$index.matches(/^[0-5]$/) && newData.hasChildren(['kind','login','client','cover'])",
                 "kind": {
                   ".validate": "newData.val() === 'winner' || newData.val() === 'loser'"
                 },
@@ -55,6 +55,9 @@
             },
             "$other": {
               ".validate": false
+            },
+            "shift": {
+              ".validate": "newData.val() === 'am' || newData.val() === 'pm' || newData.val() === 'overnight'"
             }
           }
         }
