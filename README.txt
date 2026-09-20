@@ -1,28 +1,81 @@
-P/L SYSTEM — SIMPLE END-OF-DAY UPLOAD
+P/L SYSTEM — MANUAL BRANCH REPORTS
 
-WORKER STEPS
-1. Export Manager Client Summary from Monday through the completed trading day.
-2. If the branch has cover, export Coverage Trade History for the same Monday-to-date period. Otherwise leave Coverage History empty.
-3. Choose the Summary and optional Coverage History, then click Upload & Calculate once.
-Monday: Monday–Monday. Tuesday: Monday–Tuesday. Wednesday: Monday–Wednesday. Continue through Friday.
-Use the trading date in MT5, even if uploading after midnight. No separate daily upload is needed.
+FILES / PORTALS
+management.html (or index.html) — all 12 branches + executive dashboard
+group1.html — AWADA, BBC, FAWAZ, EGYPT
+group2.html — BOUDANI, CDI, AR, SH
+group3.html — CONNECT, BADARO, MT, TR
 
-RESULTS
-This week = the latest saved Monday-to-date report; overlapping uploads are NEVER added together.
-This day = current cumulative P/L minus the previous trading day's cumulative P/L, calculated per login. Monday uses zero as the baseline. Names, new and removed logins are handled across both reports. Client P/L, Coverage P/L, Broker Net and Top 5 are recalculated for each view.
-If the previous trading day's report is missing, daily results are unavailable. The weekly result remains available. Uploading the missing report later automatically recalculates affected days. Re-uploading the same ending date replaces that snapshot after confirmation; subsequent daily differences update automatically.
-Snapshot corrections to older activity appear in the next snapshot difference. Daily coverage audit rows show closes dated that day, while daily coverage P/L reflects the snapshot difference, including corrections or newly resolved historical matches.
-Each branch's weekly result may be through a different date; the dashboard shows those dates. Missing daily branch results are excluded, not assumed zero.
-Full Source Data keeps Login, Name and Cover Profit sorting plus search.
+Upload all files together to your existing static website. Give each group its
+own page link, for example https://YOUR-SITE/group1.html. Each page uses the
+same shared database once configured. No live site or database was changed by
+this delivery. You can open index.html locally to preview first.
 
-INSTALL
-Replace index.html, app.js and styles.css together in the existing GitHub Pages repository. This update is not deployed automatically.
-Restore the correct Firebase web configuration in app.js: the supplied source still contains YOUR_FIREBASE_API_KEY. Existing authorized operators need access to the new pl_cumulative_store path. Do not make the database public to enable access.
-Old daily/weekly records remain stored. They remain visible for weeks without new cumulative uploads; the new workflow takes priority for a week when a cumulative upload exists. Old single-day records are not used as cumulative baselines.
-CLEAR EVERYTHING includes cumulative, daily and weekly stores with the existing confirmations.
+KEYBOARD
+Enter or Tab moves to the next input; Shift+Enter or Shift+Tab moves backward.
+Calculated cells are skipped. Enter on the final amount focuses Save Report.
+Tab retains standard browser keyboard navigation.
 
-VALIDATION
-Local mocked-database checks cover date ranges, baseline handling, per-login client/coverage/net differences, missing days, out-of-order uploads, corrections, next-week reset, save location, rendering functions and retained sorting. Live Firebase saving and visual browser layout were not verified.
+CALCULATIONS
+Client profit positive, client loss negative. Cover profit positive, cover loss
+negative. Enter 0 explicitly for no cover. Amounts allow up to 2 decimals.
+Broker Net = Cover Net - Client P/L.
+Net % = Broker Net / absolute Client P/L * 100. Zero denominator shows a dash.
+Combined % = sum Broker Net / sum absolute Client P/L * 100 (not average %).
+These are selected-client results, not total branch P/L; no extra IB or other
+expenses are subtracted. Top 3 entries are selected by the worker.
 
-OPTIONAL COVERAGE
-Summary-only uploads use zero week-to-date Coverage P/L. Valid coverage exports with a Deals section but no deals are also accepted. Daily coverage remains the difference between cumulative snapshots; omitting coverage after an earlier nonzero upload therefore records a correction to zero. For branches with no cover throughout the week, both daily and weekly coverage remain zero.
+REPORTS
+Choose the completed trading date. Enter up to three winners and three losers.
+Unused rows stay fully blank. If neither category has clients, tick No clients.
+Save Report creates or updates one report for that branch/date. Archive lists
+saved dates. Clear entries only clears the form until Save Report is pressed.
+Download backup exports accessible saved reports, not unsaved form entries.
+Restore only adds missing reports; it never replaces existing branch/date data.
+
+SHARED ACCESS SETUP — REQUIRED BEFORE USING WITH WORKERS
+The supplied source used a placeholder Firebase key. config.js therefore
+starts with enabled:false. In this LOCAL PREVIEW mode, reports stay in one
+browser; pages are demonstrations of separate group interfaces, NOT secure
+multi-user access. Browser storage may be cleared: download backups.
+
+1. In your Firebase project, enable Authentication > Email/Password. Create
+   worker accounts and a management account. Add your hosting domain to the
+   Firebase Authentication authorized domains when necessary.
+2. In Realtime Database, create pl_manual_roles/<AUTH_USER_UID> with the string
+   group1, group2, group3, or management. Set these roles using the Firebase
+   console or trusted Admin tooling. Workers cannot assign themselves roles.
+3. Review and deploy database.rules.json. If keeping your existing system,
+   merge the two new path rules (pl_manual_roles and pl_manual_reports_v1)
+   into your existing rules. DO NOT overwrite unrelated rules without review.
+   There must be no broader parent/root .read:true or .write:true grant: Firebase
+   grants cascade and would bypass the group restrictions. Preserve any existing
+   access by putting appropriate rules on the old paths, not a public root.
+4. Paste your actual Firebase web configuration into config.js and set
+   enabled:true. Firebase web config is not an access-control secret; the
+   authenticated roles and database rules enforce access.
+5. Upload all files. Test with each worker account: its assigned group loads;
+   the other group pages and management page deny it. Management can access
+   every group. Sign out between tests. Verify direct database access is also
+   denied for another group, not just navigation. Test saving and reading from
+   two different browsers before rollout.
+
+Shared mode never silently falls back to local saving if authentication or
+network access fails. The app only uses the NEW pl_manual_reports_v1 path;
+old imported weekly/daily reports remain in their previous database paths.
+No old Issa/Tajco data is renamed or migrated into another branch.
+
+VALIDATION LIMITS
+Client-side validation checks signs, required fields, duplicate logins, and
+three entries per category. Database rules enforce group access, allowed
+branches, schema, numeric cents, signs and at most six rows. More stringent
+server-side business validation can be added if required. The live Firebase
+configuration and rules need deployment/testing in your project; they were
+not exercised against your database during preparation.
+
+PREPARATION CHECKS
+JavaScript syntax, calculation examples, combined percentage denominator,
+input validation, Enter navigation, local save/reload, and portal branch
+scopes passed automated checks. A full browser visual check was unavailable
+in the preparation environment. Live Firebase login and authorization still
+require testing after configuration.
