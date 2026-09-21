@@ -14,7 +14,7 @@ const reportKey=(d,s)=>s==='legacy'?d:`${d}_${s}`;
 const selectedKey=()=>reportKey(date,shift);
 const recordShift=r=>r.shift||'legacy';
 const LOCAL_KEY='pl_manual_reports_v2';
-let records={},ready=false,dirty=false,busy=false,view='management',draft=[],date='',shift='am',editVersion=null;
+let records={},db=null,ready=false,dirty=false,busy=false,view='management',draft=[],date='',shift='am',editVersion=null,unsub=[];
 
 const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>(n>0?'+':n<0?'−':'')+(Math.abs(n)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -68,7 +68,7 @@ function renderEntry(){
 function updateResults(){const rows=[];draft.forEach((r,i)=>{let n=null,p='—';try{if(r.client.trim()&&r.cover.trim()){const row={client:cents(r.client),cover:cents(r.cover)};rows.push(row);n=net(row);p=pct(n,Math.abs(row.client));}}catch{}const el=$(`[data-row="${i}"]`);el.querySelector('.result-net').textContent=n===null?'—':money(n);el.querySelector('.result-net').className=`num result-net ${cls(n)}`;el.querySelector('.result-pct').textContent=p;el.querySelector('.result-pct').className=`num result-pct ${cls(n)}`;});$('#entry-totals').innerHTML=metricGrid(rows);}
 function validateRows(input,noClients){const used=input.filter(r=>!isEmpty(r));if(noClients&&used.length)throw Error('Clear the entries before selecting “No clients to report”.');if(!noClients&&!used.length)throw Error('Enter at least one client or select “No clients to report”.');const seen=new Set(),counts={winner:0,loser:0};return used.map(r=>{const login=String(r.login??'').trim();if(!/^\d+$/.test(login))throw Error('Each client needs a numeric login.');if(seen.has(login))throw Error(`Login ${login} appears more than once.`);seen.add(login);if(!Object.hasOwn(counts,r.kind)||++counts[r.kind]>3)throw Error('Use at most 3 winners and 3 losers.');const client=cents(r.client),cover=cents(r.cover);if((r.kind==='winner'&&client<=0)||(r.kind==='loser'&&client>=0))throw Error(`${login}: winners must have positive Client P/L and losers must have negative Client P/L.`);return {kind:r.kind,login,client,cover};});}
 
-function persistLocal(next){localStorage.setItem(LOCAL_KEY,JSON.stringify(next));}
+function reportPath(b,d,s){return `pl_manual_reports_v1/${groupOf(b)}/${b}/${reportKey(d,s)}`;}
 
 async function save(){
   if(busy||shift==='legacy')return;
@@ -76,13 +76,15 @@ async function save(){
     const rows=validateRows(draft,$('#no-clients').checked),noClients=$('#no-clients').checked,b=view,d=date,s=shift,key=reportKey(d,s);
     const rec={version:2,branch:b,date:d,shift:s,rows,noClients,updatedAt:new Date().toISOString()};
     busy=true;$('#save').disabled=true;
-    
-    const next={...records,[b]:{...(records[b]||{}),[key]:rec}};
-    persistLocal(next);
-    records=next;
-    
+    if(db){
+      await db.ref(reportPath(b,d,s)).set(rec);
+    }else{
+      const next={...records,[b]:{...(records[b]||{}),[key]:rec}};
+      localStorage.setItem(LOCAL_KEY,JSON.stringify(next));
+      records=next;
+    }
     editVersion=rec.updatedAt;dirty=false;
-    message('Report saved successfully locally.');
+    message('Report saved and shared in real time.');
   }catch(e){message(e.message,true);}
   finally{busy=false;const b=$('#save');if(b)b.disabled=false;}
 }
@@ -139,24 +141,51 @@ async function restore(file){
     }
     if(!additions.length){message('No missing reports to restore. Existing shifts are kept.');return;}
     if(!confirm(`Restore ${additions.length} missing reports? Existing reports will be kept.`))return;
-    const next=JSON.parse(JSON.stringify(records));
-    for(const r of additions){(next[r.branch]??={})[reportKey(r.date,recordShift(r))]=r;}
-    persistLocal(next);records=next;
+    for(const r of additions){await db.ref(reportPath(r.branch,r.date,recordShift(r))).set(r);}
     dirty=false;render();message(`Restored ${additions.length} reports.`);
   }catch(e){message(`Restore failed: ${e.message}`,true);}finally{$('#backup-file').value='';}
 }
 
-function initApp(){
-  try{
-    records=JSON.parse(localStorage.getItem(LOCAL_KEY)||'{}');
-  }catch(e){
-    records={};
+function normalizeCloud(value){const result={};for(const [b,days] of Object.entries(value||{})){if(!BRANCHES.includes(b))continue;result[b]={};for(const [d,r] of Object.entries(days||{}))result[b][d]={...r,rows:Object.values(r.rows||{})};}return result;}
+function script(src){return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=()=>reject(Error('Unable to load Firebase.'));document.head.append(s);});}
+
+async function connect(){
+  const cfg=window.PL_CONFIG;
+  if(!cfg?.enabled){
+    try{records=JSON.parse(localStorage.getItem(LOCAL_KEY)||'{}');}catch{}
+    ready=true;nav();render();return;
   }
-  $('#storage').innerHTML=`<strong>Passwordless Mode</strong><br>Group selected via dropdown.`;
-  ready=true;
-  nav();
-  view=PORTAL==='management'?'management':ALLOWED[0];
-  render();
+  $('#storage').textContent='Connecting to shared reports…';
+  try{
+    await script('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+    await script('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js');
+    firebase.initializeApp(cfg.firebase);
+    db=firebase.database();
+
+    unsub.forEach(f=>f()); unsub=[];
+    const groups=Object.keys(GROUPS);
+    await Promise.all(groups.map(async g=>{
+      const ref=db.ref(`pl_manual_reports_v1/${g}`);
+      const snap=await ref.once('value');
+      Object.assign(records,normalizeCloud(snap.val()));
+      const handler=s=>{
+        for(const b of GROUPS[g])delete records[b];
+        Object.assign(records,normalizeCloud(s.val()));
+        if(ready&&!dirty&&!busy)render();
+      };
+      ref.on('value',handler);
+      unsub.push(()=>ref.off('value',handler));
+    }));
+
+    ready=true;
+    $('#storage').innerHTML='Shared cloud sync active';
+    nav();
+    view=PORTAL==='management'?'management':ALLOWED[0];
+    render();
+  }catch(e){
+    $('#storage').textContent='Offline mode (Local storage)';
+    ready=true;nav();render();
+  }
 }
 
 date=today();$('#date').value=date;$('#shift').value=shift;
@@ -177,6 +206,4 @@ $('#group-select').onchange=e=>{
 };
 
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
-window.addEventListener('storage',e=>{if(e.key===LOCAL_KEY){try{records=JSON.parse(e.newValue||'{}');if(!dirty)render();}catch{message('Unable to refresh local reports.',true);}}});
-
-initApp();
+connect();
