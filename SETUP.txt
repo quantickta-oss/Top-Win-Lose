@@ -1,0 +1,67 @@
+SHARED SAVING — TOP 3 WINNERS AND LOSERS
+
+1. FIREBASE RULES
+Open your top-3-winners-and-losers project > Realtime Database > Rules.
+Replace the existing locked rules with the complete contents of database.rules.json.
+Click Publish. Uploading this JSON to GitHub does not apply the rules.
+
+2. ENABLE DIRECT DEVICE ACCESS
+In Firebase, open Authentication > Get started (if needed) > Sign-in method.
+Enable Anonymous and save. No worker emails or passwords are required.
+Do not enable automatic anonymous account cleanup if that option is offered.
+
+3. UPDATE GITHUB
+Extract this ZIP and upload its contents to the root of your Top-Win-Lose
+repository, replacing the existing matching files. Keep these exact names:
+app.js, config.js, styles.css, index.html, management.html, group1.html,
+group2.html, group3.html. Do not upload just the ZIP or a containing folder.
+After GitHub Pages finishes deploying, hard-refresh with Ctrl+Shift+R.
+
+4. APPROVE YOUR MANAGEMENT BROWSER ONCE
+Open https://quantickta-oss.github.io/Top-Win-Lose/management.html
+The page shows a Device ID. Copy it.
+In Firebase > Realtime Database > Data, add this structure using the + button:
+  pl_manual_roles
+    YOUR_DEVICE_ID: "management"
+The ID is the child key, and management is its STRING value.
+Do not put literal quote characters into the value field.
+Reload the website. The management dashboard should appear.
+Only someone with Firebase console access can approve or revoke devices.
+
+5. APPROVE WORKER BROWSERS
+Send workers the appropriate page:
+https://quantickta-oss.github.io/Top-Win-Lose/group1.html
+https://quantickta-oss.github.io/Top-Win-Lose/group2.html
+https://quantickta-oss.github.io/Top-Win-Lose/group3.html
+Each browser displays its own Device ID. Add each ID under pl_manual_roles
+with the string value group1, group2, or group3. The worker then reloads.
+Each device/browser needs its own approval, including your phone. Existing
+approved browsers open directly. Clearing browser site data or using a new
+private session requires approval again. Removing a role revokes its access.
+
+6. VERIFY SYNC
+On an approved worker browser, save a report with a test login, Client P/L
+100 and Cover Net 40. Broker Net should be -60 and Net % should be -60%.
+Open the same branch, trading date and shift on your approved management
+browser or phone. Confirm the saved report appears. Edit Cover Net to 50,
+save, and verify -50 on the other device. Replace test entries with real data
+when ready. Use 'No clients' only when the report is genuinely empty.
+
+BEHAVIOR
+All reports use the shared Firebase database; connection errors do not fall
+back to browser-only saving. New saves while disconnected are blocked. A
+connection loss during a submitted save may leave it pending until reconnect.
+Do not close the page until it confirms 'Report saved and shared.'
+Concurrent edits are checked before overwriting. Unsaved drafts are not
+replaced by incoming updates; a conflicting save asks you to reload.
+Existing AM/PM/Overnight calculations, 12 branches and group pages are kept.
+Backup restore supports current shift reports. Legacy daily backups cannot
+be written with these new-project rules.
+Database rules enforce assigned groups, permitted branches, basic schema,
+signs and six-row maximum. Duplicate-login and three-per-category checks
+are performed by the application.
+
+STATUS
+Prepared for your new, empty Firebase project. Configuration is included.
+Local syntax and simulated saving/access checks were run. Live authentication,
+Firebase rule deployment and two-device sync still need the steps above.

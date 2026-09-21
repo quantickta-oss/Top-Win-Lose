@@ -9,41 +9,43 @@
       }
     },
     "pl_manual_reports_v1": {
-      "$group": {
-        ".read": "auth != null && (root.child('pl_manual_roles').child(auth.uid).val() === 'management' || root.child('pl_manual_roles').child(auth.uid).val() === $group)",
+      "group1": {
+        ".read": "auth != null && (root.child('pl_manual_roles').child(auth.uid).val() === 'management' || root.child('pl_manual_roles').child(auth.uid).val() === 'group1')",
         "$branch": {
+          ".validate": "$branch === 'awada' || $branch === 'bbc' || $branch === 'fawaz' || $branch === 'egypt'",
           "$report": {
-            ".write": "auth != null && (root.child('pl_manual_roles').child(auth.uid).val() === 'management' || root.child('pl_manual_roles').child(auth.uid).val() === $group) && newData.exists() && (($group === 'group1' && ($branch === 'awada' || $branch === 'bbc' || $branch === 'fawaz' || $branch === 'egypt')) || ($group === 'group2' && ($branch === 'boudani' || $branch === 'cdi' || $branch === 'ar' || $branch === 'sh')) || ($group === 'group3' && ($branch === 'connect' || $branch === 'badaro' || $branch === 'mt' || $branch === 'tr')))",
-            ".validate": "newData.hasChildren(['version','branch','date','noClients','updatedAt']) && ((newData.child('noClients').val() === true && !newData.child('rows').exists()) || (newData.child('noClients').val() === false && newData.child('rows').exists())) && ((newData.child('version').val() === 2 && newData.hasChild('shift') && $report === newData.child('date').val() + '_' + newData.child('shift').val()) || (newData.child('version').val() === 1 && !newData.hasChild('shift') && $report === newData.child('date').val()))",
+            ".write": "auth != null && (root.child('pl_manual_roles').child(auth.uid).val() === 'management' || root.child('pl_manual_roles').child(auth.uid).val() === 'group1') && newData.exists()",
+            ".validate": "newData.hasChildren(['version','branch','date','shift','noClients','updatedAt']) && newData.child('version').val() === 2 && $report === newData.child('date').val() + '_' + newData.child('shift').val() && ((newData.child('noClients').val() === true && !newData.child('rows').exists()) || (newData.child('noClients').val() === false && newData.child('rows').exists()))",
             "version": {
-              ".validate": "newData.val() === 1 || newData.val() === 2"
+              ".validate": "newData.val() === 2"
             },
             "branch": {
               ".validate": "newData.val() === $branch"
             },
             "date": {
-              ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+              ".validate": "newData.isString() && newData.val().matches(/^\\d{4}-\\d{2}-\\d{2}$/)"
             },
-            "updatedAt": {
-              ".validate": "newData.isString()"
+            "shift": {
+              ".validate": "newData.val() === 'am' || newData.val() === 'pm' || newData.val() === 'overnight'"
             },
             "noClients": {
               ".validate": "newData.isBoolean()"
             },
+            "updatedAt": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
             "rows": {
-              "$index": {
-                ".validate": "$index.matches(/^[0-5]$/) && newData.hasChildren(['kind','login','client','cover'])",
+              ".validate": "newData.numChildren() <= 6",
+              "$i": {
+                ".validate": "$i.matches(/^[0-5]$/) && newData.hasChildren(['kind','login','client','cover']) && ((newData.child('kind').val() === 'winner' && newData.child('client').val() > 0) || (newData.child('kind').val() === 'loser' && newData.child('client').val() < 0))",
                 "kind": {
                   ".validate": "newData.val() === 'winner' || newData.val() === 'loser'"
                 },
                 "login": {
-                  ".validate": "newData.isString() && newData.val().matches(/^[0-9]+$/)"
-                },
-                "name": {
-                  ".validate": "newData.isString() && newData.val().length > 0"
+                  ".validate": "newData.isString() && newData.val().matches(/^[0-9]+$/) && newData.val().length <= 30"
                 },
                 "client": {
-                  ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= -100000000000000 && newData.val() <= 100000000000000 && ((newData.parent().child('kind').val() === 'winner' && newData.val() > 0) || (newData.parent().child('kind').val() === 'loser' && newData.val() < 0))"
+                  ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= -100000000000000 && newData.val() <= 100000000000000"
                 },
                 "cover": {
                   ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= -100000000000000 && newData.val() <= 100000000000000"
@@ -55,9 +57,110 @@
             },
             "$other": {
               ".validate": false
+            }
+          }
+        }
+      },
+      "group2": {
+        ".read": "auth != null && (root.child('pl_manual_roles').child(auth.uid).val() === 'management' || root.child('pl_manual_roles').child(auth.uid).val() === 'group2')",
+        "$branch": {
+          ".validate": "$branch === 'boudani' || $branch === 'cdi' || $branch === 'ar' || $branch === 'sh'",
+          "$report": {
+            ".write": "auth != null && (root.child('pl_manual_roles').child(auth.uid).val() === 'management' || root.child('pl_manual_roles').child(auth.uid).val() === 'group2') && newData.exists()",
+            ".validate": "newData.hasChildren(['version','branch','date','shift','noClients','updatedAt']) && newData.child('version').val() === 2 && $report === newData.child('date').val() + '_' + newData.child('shift').val() && ((newData.child('noClients').val() === true && !newData.child('rows').exists()) || (newData.child('noClients').val() === false && newData.child('rows').exists()))",
+            "version": {
+              ".validate": "newData.val() === 2"
+            },
+            "branch": {
+              ".validate": "newData.val() === $branch"
+            },
+            "date": {
+              ".validate": "newData.isString() && newData.val().matches(/^\\d{4}-\\d{2}-\\d{2}$/)"
             },
             "shift": {
               ".validate": "newData.val() === 'am' || newData.val() === 'pm' || newData.val() === 'overnight'"
+            },
+            "noClients": {
+              ".validate": "newData.isBoolean()"
+            },
+            "updatedAt": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "rows": {
+              ".validate": "newData.numChildren() <= 6",
+              "$i": {
+                ".validate": "$i.matches(/^[0-5]$/) && newData.hasChildren(['kind','login','client','cover']) && ((newData.child('kind').val() === 'winner' && newData.child('client').val() > 0) || (newData.child('kind').val() === 'loser' && newData.child('client').val() < 0))",
+                "kind": {
+                  ".validate": "newData.val() === 'winner' || newData.val() === 'loser'"
+                },
+                "login": {
+                  ".validate": "newData.isString() && newData.val().matches(/^[0-9]+$/) && newData.val().length <= 30"
+                },
+                "client": {
+                  ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= -100000000000000 && newData.val() <= 100000000000000"
+                },
+                "cover": {
+                  ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= -100000000000000 && newData.val() <= 100000000000000"
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      },
+      "group3": {
+        ".read": "auth != null && (root.child('pl_manual_roles').child(auth.uid).val() === 'management' || root.child('pl_manual_roles').child(auth.uid).val() === 'group3')",
+        "$branch": {
+          ".validate": "$branch === 'connect' || $branch === 'badaro' || $branch === 'mt' || $branch === 'tr'",
+          "$report": {
+            ".write": "auth != null && (root.child('pl_manual_roles').child(auth.uid).val() === 'management' || root.child('pl_manual_roles').child(auth.uid).val() === 'group3') && newData.exists()",
+            ".validate": "newData.hasChildren(['version','branch','date','shift','noClients','updatedAt']) && newData.child('version').val() === 2 && $report === newData.child('date').val() + '_' + newData.child('shift').val() && ((newData.child('noClients').val() === true && !newData.child('rows').exists()) || (newData.child('noClients').val() === false && newData.child('rows').exists()))",
+            "version": {
+              ".validate": "newData.val() === 2"
+            },
+            "branch": {
+              ".validate": "newData.val() === $branch"
+            },
+            "date": {
+              ".validate": "newData.isString() && newData.val().matches(/^\\d{4}-\\d{2}-\\d{2}$/)"
+            },
+            "shift": {
+              ".validate": "newData.val() === 'am' || newData.val() === 'pm' || newData.val() === 'overnight'"
+            },
+            "noClients": {
+              ".validate": "newData.isBoolean()"
+            },
+            "updatedAt": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "rows": {
+              ".validate": "newData.numChildren() <= 6",
+              "$i": {
+                ".validate": "$i.matches(/^[0-5]$/) && newData.hasChildren(['kind','login','client','cover']) && ((newData.child('kind').val() === 'winner' && newData.child('client').val() > 0) || (newData.child('kind').val() === 'loser' && newData.child('client').val() < 0))",
+                "kind": {
+                  ".validate": "newData.val() === 'winner' || newData.val() === 'loser'"
+                },
+                "login": {
+                  ".validate": "newData.isString() && newData.val().matches(/^[0-9]+$/) && newData.val().length <= 30"
+                },
+                "client": {
+                  ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= -100000000000000 && newData.val() <= 100000000000000"
+                },
+                "cover": {
+                  ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= -100000000000000 && newData.val() <= 100000000000000"
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            },
+            "$other": {
+              ".validate": false
             }
           }
         }
