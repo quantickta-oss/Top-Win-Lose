@@ -1,5 +1,5 @@
 window.PL_CONFIG = {
-  enabled: true,
+  enabled: false,
   firebase: {
     apiKey: "AIzaSyCaQ-5-J0lxLsWmRWfC_ewR1BzouHqZzpo",
     authDomain: "pl-system-2.firebaseapp.com",
