@@ -35,7 +35,6 @@
               ".validate": "newData.isString() && newData.val().length <= 40"
             },
             "rows": {
-              ".validate": "newData.numChildren() <= 6",
               "$i": {
                 ".validate": "$i.matches(/^[0-5]$/) && newData.hasChildren(['kind','login','client','cover']) && ((newData.child('kind').val() === 'winner' && newData.child('client').val() > 0) || (newData.child('kind').val() === 'loser' && newData.child('client').val() < 0))",
                 "kind": {
@@ -87,7 +86,6 @@
               ".validate": "newData.isString() && newData.val().length <= 40"
             },
             "rows": {
-              ".validate": "newData.numChildren() <= 6",
               "$i": {
                 ".validate": "$i.matches(/^[0-5]$/) && newData.hasChildren(['kind','login','client','cover']) && ((newData.child('kind').val() === 'winner' && newData.child('client').val() > 0) || (newData.child('kind').val() === 'loser' && newData.child('client').val() < 0))",
                 "kind": {
@@ -139,7 +137,6 @@
               ".validate": "newData.isString() && newData.val().length <= 40"
             },
             "rows": {
-              ".validate": "newData.numChildren() <= 6",
               "$i": {
                 ".validate": "$i.matches(/^[0-5]$/) && newData.hasChildren(['kind','login','client','cover']) && ((newData.child('kind').val() === 'winner' && newData.child('client').val() > 0) || (newData.child('kind').val() === 'loser' && newData.child('client').val() < 0))",
                 "kind": {
